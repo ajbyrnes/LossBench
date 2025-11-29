@@ -1,3 +1,6 @@
 # Data files
 data/
 *.root
+
+# Build files
+build/
