@@ -11,6 +11,5 @@ target_include_directories(
 
 target_link_libraries(
     benchmark PUBLIC
-    utils
     compressors
 )

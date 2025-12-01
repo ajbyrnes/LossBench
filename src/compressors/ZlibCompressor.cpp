@@ -3,7 +3,6 @@
 #include <zlib.h>
 
 #include "ZlibCompressor.hpp"
-#include "interface.hpp"
 
 CompressedData ZlibCompressor::compress(const std::vector<float>& data) const {
     // Setup

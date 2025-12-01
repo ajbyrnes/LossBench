@@ -1,12 +1,13 @@
 #include <format>
 #include <iostream>
 #include <memory>
+#include <map>
 #include <random>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
-#include "ZlibCompressor.hpp"
+#include "factory.hpp"
 #include "benchmark.hpp"
 
 int main() {
@@ -20,15 +21,15 @@ int main() {
         val = dist(rng);
     }
 
-    ZlibCompressor compressor;
+    auto compressor = createCompressor("zlib");
 
     std::map<std::string, std::string> options = {
-        {"compression_level", "9"}
+        {"compressionLevel", "9"}
     };
-    compressor.configure(options);
+    compressor->configure(options);
 
     // Timed compression
-    CompressionResult compResult = timedCompress(compressor, data);
+    CompressionResult compResult = timedCompress(*compressor, data);
     std::cout << std::format(
         "Compressed {} bytes into {} bytes in {:.2f} ms.\n",
         data.size() * sizeof(float),
@@ -37,7 +38,7 @@ int main() {
     );
 
     // Timed decompression
-    DecompressionResult decompResult = timedDecompress(compressor, compResult.compressed);
+    DecompressionResult decompResult = timedDecompress(*compressor, compResult.compressed);
     std::cout << std::format(
         "Decompressed back to {} bytes in {:.2f} ms.\n",
         decompResult.decompressed.size() * sizeof(float),

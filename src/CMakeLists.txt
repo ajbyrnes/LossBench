@@ -16,12 +16,12 @@ include_directories(${ROOT_INCLUDE_DIRS})
 find_package(ZLIB REQUIRED)
 
 # Subdirectories
-add_subdirectory(utils)
+add_subdirectory(root-utils)
 add_subdirectory(compressors)
 add_subdirectory(benchmark)
 
 # Main target
-add_executable(lossbench lossbench.cpp utils/root.cpp)
+add_executable(lossbench lossbench.cpp)
 
 target_link_libraries(
     lossbench PRIVATE
@@ -29,7 +29,7 @@ target_link_libraries(
     ZLIB::ZLIB
     compressors
     benchmark
-    utils
+    root-utils
 )
 
 # Silence the ROOT header #warning about a C++ standard mismatch; 

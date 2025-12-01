@@ -4,6 +4,8 @@ add_library(compressors STATIC
     Compressor.hpp
     ZlibCompressor.cpp
     ZlibCompressor.hpp
+    factory.cpp
+    factory.hpp
 )
 
 target_include_directories(
@@ -13,6 +15,5 @@ target_include_directories(
 
 target_link_libraries(
     compressors PUBLIC
-    utils
     ZLIB::ZLIB
 )
