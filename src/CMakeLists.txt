@@ -12,8 +12,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(ROOT REQUIRED COMPONENTS RIO Tree)
 include_directories(${ROOT_INCLUDE_DIRS})
 
+# Find ZLIB
+find_package(ZLIB REQUIRED)
+
 # Subdirectories
-#add_subdirectory(tests)
+add_subdirectory(utils)
+add_subdirectory(compressors)
 
 # Main target
 add_executable(lossbench lossbench.cpp utils/root.cpp)
@@ -21,6 +25,7 @@ add_executable(lossbench lossbench.cpp utils/root.cpp)
 target_link_libraries(
     lossbench PRIVATE
     ROOT::Core ROOT::RIO ROOT::Tree ROOT::TreePlayer
+    compressors
 )
 
 # Silence the ROOT header #warning about a C++ standard mismatch; 

@@ -5,22 +5,72 @@
 #include "ZlibCompressor.hpp"
 #include "interface.hpp"
 
-std::vector<std::uint8_t> ZlibCompressor::compress(const std::vector<float>& data) const {
-    // Implement zlib compression logic here
-    // Placeholder implementation
-    return std::vector<std::uint8_t>{};
+CompressedData ZlibCompressor::compress(const std::vector<float>& data) const {
+    // Setup
+    const uint8_t* inputBytes = reinterpret_cast<const uint8_t*>(data.data());
+    const uLongf inputSize = static_cast<uLongf>(data.size() * sizeof(float));
+    uLongf maxCompressedSize = compressBound(inputSize);
+    std::vector<std::uint8_t> compressedData(maxCompressedSize);
+
+    // Compress
+    int res = compress2(
+        compressedData.data(),
+        &maxCompressedSize,
+        inputBytes,
+        inputSize,
+        _compressionLevel
+    );
+
+    // Error checking
+    if (res != Z_OK) {
+        throw std::runtime_error("Zlib compression failed with error code: " + std::to_string(res));
+    }
+
+    // Return resized buffer
+    compressedData.resize(maxCompressedSize);
+    return {
+        .bytes = std::move(compressedData),
+        .originalSize = data.size() * sizeof(float)
+    };
 }
 
-std::vector<float> ZlibCompressor::decompress(const std::vector<std::uint8_t>& bytes) const {
-    // Implement zlib decompression logic here
-    // Placeholder implementation
-    return std::vector<float>{};
+std::vector<float> ZlibCompressor::decompress(const CompressedData& compressedData) const {
+    // Setup
+    if (compressedData.originalSize % sizeof(float) != 0) {
+        throw std::runtime_error("CompressedData originalSize is not aligned to sizeof(float).");
+    }
+
+    const std::size_t floatCount = compressedData.originalSize / sizeof(float);
+    uLongf outputBytes = static_cast<uLongf>(compressedData.originalSize);
+    std::vector<float> decompressedData(floatCount);
+
+    // Decompress
+    int res = uncompress(
+        reinterpret_cast<Bytef*>(decompressedData.data()),
+        &outputBytes,
+        compressedData.bytes.data(),
+        static_cast<uLongf>(compressedData.bytes.size())
+    );
+
+    // Error checking
+    if (res != Z_OK) {
+        throw std::runtime_error("Zlib decompression failed with error code: " + std::to_string(res));
+    }
+
+    // Return decompressed data
+    return decompressedData;
 }
 
 void ZlibCompressor::configure(const std::map<std::string, std::string>& options) {
-    auto it = options.find("compressionLevel");
-    if (it != options.end()) {
-        compressionLevel = std::stoi(it->second);
+    for (const auto& option : options) {
+        if (option.first == "compressionLevel") {
+            _compressionLevel = std::stoi(option.second);
+
+            // Validate
+            if (_compressionLevel < 0 || _compressionLevel > 9) {
+                throw std::runtime_error("Invalid compression level for zlib. Must be between 0 and 9.");
+            }
+        }
     }
 }
 
