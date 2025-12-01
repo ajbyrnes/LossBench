@@ -12,6 +12,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(ROOT REQUIRED COMPONENTS RIO Tree)
 include_directories(${ROOT_INCLUDE_DIRS})
 
+# Subdirectories
+add_subdirectory(tests)
+
 # Main target
 add_executable(benchmark benchmark.cpp)
 
