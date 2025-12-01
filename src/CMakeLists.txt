@@ -16,10 +16,10 @@ include_directories(${ROOT_INCLUDE_DIRS})
 #add_subdirectory(tests)
 
 # Main target
-add_executable(benchmark benchmark.cpp utils/root.cpp)
+add_executable(lossbench lossbench.cpp utils/root.cpp)
 
 target_link_libraries(
-    benchmark PRIVATE
+    lossbench PRIVATE
     ROOT::Core ROOT::RIO ROOT::Tree ROOT::TreePlayer
 )
 
@@ -28,7 +28,7 @@ target_link_libraries(
 # Considered removing the C++20 dependency,
 # but std::format from C++20 is quite useful,
 # and ROOT will presumably move to requiring C++20 in the future.
-target_compile_options(benchmark PRIVATE -Wno-cpp)
+target_compile_options(lossbench PRIVATE -Wno-cpp)
 
 # Enable testing
 #include(CTest)
