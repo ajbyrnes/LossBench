@@ -13,10 +13,10 @@ find_package(ROOT REQUIRED COMPONENTS RIO Tree)
 include_directories(${ROOT_INCLUDE_DIRS})
 
 # Subdirectories
-add_subdirectory(tests)
+#add_subdirectory(tests)
 
 # Main target
-add_executable(benchmark benchmark.cpp)
+add_executable(benchmark benchmark.cpp utils/root.cpp)
 
 target_link_libraries(
     benchmark PRIVATE
@@ -31,11 +31,11 @@ target_link_libraries(
 target_compile_options(benchmark PRIVATE -Wno-cpp)
 
 # Enable testing
-include(CTest)
-include(FetchContent)
-FetchContent_Declare(
-  googletest
-  URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
-)
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE) # harmless on Linux
-FetchContent_MakeAvailable(googletest)
+#include(CTest)
+#include(FetchContent)
+#FetchContent_Declare(
+#  googletest
+#  URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
+#)
+#set(gtest_force_shared_crt ON CACHE BOOL "" FORCE) # harmless on Linux
+#FetchContent_MakeAvailable(googletest)

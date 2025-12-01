@@ -6,4 +6,5 @@ data/
 build/
 
 # Analysis files
+analysis/
 *.ipynb
