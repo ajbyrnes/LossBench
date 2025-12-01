@@ -18,6 +18,7 @@ find_package(ZLIB REQUIRED)
 # Subdirectories
 add_subdirectory(utils)
 add_subdirectory(compressors)
+add_subdirectory(benchmark)
 
 # Main target
 add_executable(lossbench lossbench.cpp utils/root.cpp)
@@ -25,7 +26,10 @@ add_executable(lossbench lossbench.cpp utils/root.cpp)
 target_link_libraries(
     lossbench PRIVATE
     ROOT::Core ROOT::RIO ROOT::Tree ROOT::TreePlayer
+    ZLIB::ZLIB
     compressors
+    benchmark
+    utils
 )
 
 # Silence the ROOT header #warning about a C++ standard mismatch; 

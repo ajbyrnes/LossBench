@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "ZlibCompressor.hpp"
-
+#include "benchmark.hpp"
 
 int main() {
     // Perform in-memory compression with zlib
@@ -21,33 +21,57 @@ int main() {
     }
 
     ZlibCompressor compressor;
-    // Print compressor info
-    std::cout << "Compressor: " << compressor.description() << "\n";
-    std::cout << "Version: " << compressor.version() << "\n";
-    std::cout << "Usage: " << compressor.usage() << "\n";
 
-    // Compress data
-    CompressedData compressedData = compressor.compress(data);
-    std::cout << "Original size: " << data.size() * sizeof(float) << " bytes\n";
-    std::cout << "Compressed size: " << compressedData.bytes.size() << " bytes\n";
+    std::map<std::string, std::string> options = {
+        {"compression_level", "9"}
+    };
+    compressor.configure(options);
 
-    // Decompress data
-    std::vector<float> decompressedData = compressor.decompress(compressedData);
-    std::cout << "Decompressed size: " << decompressedData.size() * sizeof(float) << " bytes\n";
+    // Timed compression
+    CompressionResult compResult = timedCompress(compressor, data);
+    std::cout << std::format(
+        "Compressed {} bytes into {} bytes in {:.2f} ms.\n",
+        data.size() * sizeof(float),
+        compResult.compressed.bytes.size(),
+        compResult.elapsed.count()
+    );
 
-    // Print first 10 values of original data
-    std::cout << "First 10 values of original data:\n";
-    for (size_t i = 0; i < 10 && i < data.size(); ++i) {
-        std::cout << data[i] << " ";
-    }
-    std::cout << "\n";
+    // Timed decompression
+    DecompressionResult decompResult = timedDecompress(compressor, compResult.compressed);
+    std::cout << std::format(
+        "Decompressed back to {} bytes in {:.2f} ms.\n",
+        decompResult.decompressed.size() * sizeof(float),
+        decompResult.elapsed.count()
+    );
 
-    // Print first 10 values of decompressed data
-    std::cout << "First 10 values of decompressed data:\n";
-    for (size_t i = 0; i < 10 && i < decompressedData.size(); ++i) {
-        std::cout << decompressedData[i] << " ";
-    }
-    std::cout << "\n";
-    
+    // Compute benchmark metrics
+    BenchmarkResult metrics = computeBenchmarkMetrics(
+        data,
+        compResult,
+        decompResult
+    );
+
+    std::cout << std::format(
+        "Compression Ratio: {:.2f}\n"
+        "Compression Throughput: {:.2f} MB/s\n"
+        "Decompression Throughput: {:.2f} MB/s\n"
+        "Max Absolute Error: {:.6f}\n"
+        "Avg Absolute Error: {:.6f}\n"
+        "Max Relative Error: {:.6f}\n"
+        "Avg Relative Error: {:.6f}\n"
+        "MSE: {:.6f}\n"
+        "PSNR: {:.2f} dB\n",
+        metrics.compressionRatio,
+        metrics.compressionThroughputMbps,
+        metrics.decompressionThroughputMbps,
+        metrics.absErrorMax,
+        metrics.absErrorAvg,
+        metrics.relErrorMax,
+        metrics.relErrorAvg,
+        metrics.MSE,
+        metrics.PSNR
+    );
+
+
     return 0;
 }
