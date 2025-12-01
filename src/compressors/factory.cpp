@@ -1,16 +1,21 @@
-#include <algorithm>
-#include <cctype>
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 
 #include "ZlibCompressor.hpp"
 #include "factory.hpp"
 
+using CompressorFactory = std::unique_ptr<Compressor>(*)();
 
 std::unique_ptr<Compressor> createCompressor(const std::string& name) {
-    if (name == "zlib") {
-        return std::make_unique<ZlibCompressor>();
+    static const std::unordered_map<std::string, CompressorFactory> kFactories = {
+        {"zlib", +[]() -> std::unique_ptr<Compressor> { return std::make_unique<ZlibCompressor>(); }},
+    };
+
+    const auto it = kFactories.find(name);
+    if (it != kFactories.end()) {
+        return it->second();
     }
 
     throw std::invalid_argument("Unknown compressor: " + name);

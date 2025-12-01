@@ -19,6 +19,7 @@ find_package(ZLIB REQUIRED)
 add_subdirectory(root-utils)
 add_subdirectory(compressors)
 add_subdirectory(benchmark)
+add_subdirectory(interface)
 
 # Main target
 add_executable(lossbench lossbench.cpp)
@@ -30,6 +31,7 @@ target_link_libraries(
     compressors
     benchmark
     root-utils
+    interface
 )
 
 # Silence the ROOT header #warning about a C++ standard mismatch; 
