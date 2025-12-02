@@ -4,7 +4,7 @@
 
 #include "ZlibCompressor.hpp"
 
-CompressedData ZlibCompressor::compress(const std::vector<float>& data) const {
+CompressedData ZlibCompressor::compress(const std::vector<float>& data) {
     // Setup
     const uint8_t* inputBytes = reinterpret_cast<const uint8_t*>(data.data());
     const uLongf inputSize = static_cast<uLongf>(data.size() * sizeof(float));
@@ -33,7 +33,7 @@ CompressedData ZlibCompressor::compress(const std::vector<float>& data) const {
     };
 }
 
-std::vector<float> ZlibCompressor::decompress(const CompressedData& compressedData) const {
+std::vector<float> ZlibCompressor::decompress(const CompressedData& compressedData) {
     // Setup
     if (compressedData.originalSize % sizeof(float) != 0) {
         throw std::runtime_error("CompressedData originalSize is not aligned to sizeof(float).");

@@ -33,12 +33,12 @@ struct BenchmarkResult {
 
 // Run compression while measuring wall-clock time.
 CompressionResult timedCompress(
-    const Compressor& compressor,
+    Compressor& compressor,
     const std::vector<float>& data);
 
 // Run decompression while measuring wall-clock time.
 DecompressionResult timedDecompress(
-    const Compressor& compressor,
+    Compressor& compressor,
     const CompressedData& compressedData);
 
 // Compute benchmark metrics given original and decompressed data.

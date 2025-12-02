@@ -20,10 +20,10 @@ public:
     virtual ~Compressor() = default;
 
     // Compress a vector of floats into a byte buffer.
-    virtual CompressedData compress(const std::vector<float>& data) const = 0;
+    virtual CompressedData compress(const std::vector<float>& data) = 0;
 
     // Decompress a byte buffer back into floats.
-    virtual std::vector<float> decompress(const CompressedData& compressedData) const = 0;
+    virtual std::vector<float> decompress(const CompressedData& compressedData) = 0;
 
     // Parse comma-separated arguments specific to the compressor implementation.
     virtual void configure(const std::map<std::string, std::string>& options) = 0;

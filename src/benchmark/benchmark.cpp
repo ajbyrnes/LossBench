@@ -3,7 +3,7 @@
 #include "benchmark.hpp"
 
 CompressionResult timedCompress(
-    const Compressor& compressor,
+    Compressor& compressor,
     const std::vector<float>& data
 ) 
 {
@@ -17,7 +17,7 @@ CompressionResult timedCompress(
 }
 
 DecompressionResult timedDecompress(
-    const Compressor& compressor,
+    Compressor& compressor,
     const CompressedData& compressedData
 ) 
 {

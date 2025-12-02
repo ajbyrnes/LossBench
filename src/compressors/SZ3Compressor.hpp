@@ -11,8 +11,8 @@
 
 class SZ3Compressor : public Compressor {
 public: 
-    CompressedData compress(const std::vector<float>& data) const override;
-    std::vector<float> decompress(const CompressedData& compressedData) const override;
+    CompressedData compress(const std::vector<float>& data) override;
+    std::vector<float> decompress(const CompressedData& compressedData) override;
     void configure(const std::map<std::string, std::string>& options) override;
     std::string name() const override;
     std::string description() const override;
