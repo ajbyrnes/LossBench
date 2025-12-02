@@ -8,13 +8,6 @@ project(LossBench VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Find the ROOT package
-find_package(ROOT REQUIRED COMPONENTS RIO Tree)
-include_directories(${ROOT_INCLUDE_DIRS})
-
-# Find ZLIB
-find_package(ZLIB REQUIRED)
-
 # Subdirectories
 add_subdirectory(root-utils)
 add_subdirectory(compressors)
@@ -26,20 +19,11 @@ add_executable(lossbench lossbench.cpp)
 
 target_link_libraries(
     lossbench PRIVATE
-    ROOT::Core ROOT::RIO ROOT::Tree ROOT::TreePlayer
-    ZLIB::ZLIB
     compressors
     benchmark
     root-utils
     interface
 )
-
-# Silence the ROOT header #warning about a C++ standard mismatch; 
-# the build intentionally uses C++20.
-# Considered removing the C++20 dependency,
-# but std::format from C++20 is quite useful,
-# and ROOT will presumably move to requiring C++20 in the future.
-target_compile_options(lossbench PRIVATE -Wno-cpp)
 
 # Enable testing
 #include(CTest)
