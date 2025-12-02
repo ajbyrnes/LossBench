@@ -1,14 +1,16 @@
 #!/bin/bash
 # Benchmark script for zlib compression with varying compression levels.
 
-# Setup results location
+# Create a timestamped results directory to store output files:
+#    results.jsonl -- results of running the benchmarks, in JSONL format
+#    benchmark.log -- logging statements output by the benchmarking program, in plain text
+# The timestamp uniquely identifies the run and prevents overwriting previous results
 timestamp=$(date +"%Y%m%d_%H%M%S")
 
 results_dir="results_zlib_$timestamp"
 mkdir -p "$results_dir"
 
 results_file="$results_dir/results.jsonl"
-decomp_file="$results_dir/decompData.root"
 log_file="$results_dir/benchmark.log"
 
 # Benchmark parameters

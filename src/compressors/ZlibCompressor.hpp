@@ -8,7 +8,6 @@
 
 class ZlibCompressor : public Compressor {
 public:
-    // Implement compress, decompress, configure, description, version, usage methods here.
     CompressedData compress(const std::vector<float>& data) const override;
     std::vector<float> decompress(const CompressedData& compressedData) const override;
     void configure(const std::map<std::string, std::string>& options) override;
