@@ -7,13 +7,13 @@
 
 // Result of a timed compression run.
 struct CompressionResult {
-    CompressedData compressed;
+    CompressedData compressedData;
     std::chrono::duration<double, std::milli> elapsed;
 };
 
 // Result of a timed decompression run.
 struct DecompressionResult {
-    std::vector<float> decompressed;
+    std::vector<float> decompressedData;
     std::chrono::duration<double, std::milli> elapsed;
 };
 
@@ -39,7 +39,7 @@ CompressionResult timedCompress(
 // Run decompression while measuring wall-clock time.
 DecompressionResult timedDecompress(
     const Compressor& compressor,
-    const CompressedData& compressed);
+    const CompressedData& compressedData);
 
 // Compute benchmark metrics given original and decompressed data.
 BenchmarkResult computeBenchmarkMetrics(

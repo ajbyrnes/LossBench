@@ -31,11 +31,11 @@ void printUsage();
 void printArgs(const Args& args);
 
 // Build a JSON object representing benchmark outputs.
-nlohmann::json makeBenchmarkJson(
+nlohmann::json makeBenchmarkJSON(
     const Args& args,
     const BenchmarkResult& metrics,
     const CompressionResult& comp,
-    const DecompressionResult& decomp);
+    std::string branch);
 
 // Append a JSON object as a single line to a JSONL file.
-void appendJsonl(const std::string& filepath, const nlohmann::json& entry);
+void appendJSONL(const std::string& filepath, const nlohmann::json& entry);

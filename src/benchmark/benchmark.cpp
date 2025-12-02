@@ -8,24 +8,24 @@ CompressionResult timedCompress(
 ) 
 {
     auto start = std::chrono::high_resolution_clock::now();
-    CompressedData compressed = compressor.compress(data);
+    CompressedData compressedData = compressor.compress(data);
     auto end = std::chrono::high_resolution_clock::now();
     return {
-        .compressed = std::move(compressed),
+        .compressedData = std::move(compressedData),
         .elapsed = end - start
     };
 }
 
 DecompressionResult timedDecompress(
     const Compressor& compressor,
-    const CompressedData& compressed
+    const CompressedData& compressedData
 ) 
 {
     auto start = std::chrono::high_resolution_clock::now();
-    std::vector<float> decompressed = compressor.decompress(compressed);
+    std::vector<float> decompressedData = compressor.decompress(compressedData);
     auto end = std::chrono::high_resolution_clock::now();
     return {
-        .decompressed = std::move(decompressed),
+        .decompressedData = std::move(decompressedData),
         .elapsed = end - start
     };
 }
@@ -37,12 +37,12 @@ BenchmarkResult computeBenchmarkMetrics(
 )
 {
     // Number of floats should be the same before and after
-    if (original.size() != decompResult.decompressed.size()) {
+    if (original.size() != decompResult.decompressedData.size()) {
         throw std::runtime_error("Original and decompressed data size mismatch.");
     }
 
     size_t dataSizeBytes = original.size() * sizeof(float);
-    float compressionRatio = static_cast<float>(dataSizeBytes) / compResult.compressed.bytes.size();
+    float compressionRatio = static_cast<float>(dataSizeBytes) / compResult.compressedData.bytes.size();
     float compressionThroughputMbps = (dataSizeBytes / (1024.0f * 1024.0f)) / (compResult.elapsed.count() / 1000.0f);
     float decompressionThroughputMbps = (dataSizeBytes / (1024.0f * 1024.0f)) / (decompResult.elapsed.count() / 1000.0f);
 
@@ -53,7 +53,7 @@ BenchmarkResult computeBenchmarkMetrics(
     float mseSum = 0.0f;
 
     for (size_t i = 0; i < original.size(); ++i) {
-        float absError = std::abs(original[i] - decompResult.decompressed[i]);
+        float absError = std::abs(original[i] - decompResult.decompressedData[i]);
         absErrorMax = std::max(absErrorMax, absError);
         absErrorSum += absError;
 

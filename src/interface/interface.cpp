@@ -111,7 +111,7 @@ void printArgs(const Args& args) {
     std::cout << "Tree name: " << args.treename << "\n";
     std::cout << "Branches:\n";
     for (const auto& branch : args.branches) {
-        std::cout << "  " << branch << "\n";
+        std::cout << "  " << branch  << std::endl;
     }
     std::cout << "Chunk size: " << args.chunkSize << "\n";
     std::cout << "Compressor: " << args.compressor << "\n";
@@ -123,7 +123,7 @@ void printArgs(const Args& args) {
     if (!args.decompFile.empty()) {
         std::cout << "Decompressed output: " << args.decompFile << "\n";
     } else {
-        std::cout << "Decompressed output: (not written)\n";
+        std::cout << "Decompressed output: None\n";
     }
     std::cout << "--------------------------------------------\n";
 }
@@ -132,7 +132,7 @@ nlohmann::json makeBenchmarkJSON(
     const Args& args,
     const BenchmarkResult& metrics,
     const CompressionResult& comp,
-    const DecompressionResult& decomp)
+    std::string branch)
 {
     nlohmann::json j;
 
@@ -140,7 +140,7 @@ nlohmann::json makeBenchmarkJSON(
     j["config"] = {
         {"input_file", args.dataFile},
         {"tree", args.treename},
-        {"branches", args.branches},
+        {"branches", branch},
         {"chunk_size", args.chunkSize},
         {"compressor", args.compressor},
         {"compressor_options", args.compressionOptions},
@@ -150,8 +150,8 @@ nlohmann::json makeBenchmarkJSON(
 
     // Metrics and sizes
     j["results"] = {
-        {"original_size_bytes", comp.originalSizeBytes},
-        {"compressed_size_bytes", comp.compressedSizeBytes},
+        {"original_size_bytes", comp.compressedData.originalSize * sizeof(float)},
+        {"compressed_size_bytes", comp.compressedData.bytes.size()},
         {"compression_ratio", metrics.compressionRatio},
         {"compression_throughput_mbps", metrics.compressionThroughputMbps},
         {"decompression_throughput_mbps", metrics.decompressionThroughputMbps},

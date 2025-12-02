@@ -1,6 +1,10 @@
 # Data files
 data/
+results*
 *.root
+*.json
+*.jsonl
+*.log
 
 # Build files
 build/
