@@ -1,6 +1,6 @@
 # LossBench: Benchmarking open-source compressors on data stored in columnar ROOT formats
 
-ROOTLess is a research-oriented benchmarking tool for testing error-bounded lossy compression algorithms on data stored in ROOT TTrees*. It allows users to select branches from TTrees, apply a chosen compressor with user-defined configuration, and evaluate compression ratio, speed, and distortion entirely in memory without modifying ROOT. This enables rapid experimentation with new or existing compressors on real HEP data. ROOTLess can also optionally write out compressed data for further inspection or downstream analysis.
+LossBench is a research-oriented benchmarking tool for testing error-bounded lossy compression algorithms on data stored in ROOT TTrees*. It allows users to select branches from TTrees, apply a chosen compressor with user-defined configuration, and evaluate compression ratio, speed, and distortion entirely in memory without modifying ROOT. This enables rapid experimentation with new or existing compressors on real HEP data. LossBench can also optionally write out compressed data for further inspection or downstream analysis.
 
 The ROOT framework currently provides four lossless compressors (zlib, lzma, lz4, zstd) for writing TTrees. Compression is handled through ROOT’s core I/O functionality, making it nontrivial to add new compressors. If we simply want to understand how a new compressor or configuration performs on typical columnar HEP data, the compression must therefore be performed outside of ROOT. However, reading TTree data still must be done through ROOT—TTrees are compressed per-column (as is typical for columnar formats), so treating an entire TTree as an opaque binary blob would not produce realistic or meaningful results.
 
@@ -8,7 +8,7 @@ The ROOT framework currently provides four lossless compressors (zlib, lzma, lz4
 
 ## Build
 
-ROOTLess is a CMake project written in C++. It requires a C++ compiler and CMake (exact versions TBD).
+LossBench is a CMake project written in C++. It requires a C++ compiler and CMake (exact versions TBD).
 
 Additional external dependencies include:
 
@@ -32,79 +32,92 @@ make install
 ## Usage
 
 ```bash
-./ROOTLess --input-file <inFile> --tree-name <treename> --branch-names <branch1,branch2,...>
-           --chunk-size <size>
-           --compressor <compressor,opt1,opt2,...>
-           [--results-file <resFile>]
+./lossbench --inputFile <inputFile> --tree <treename> --branches <branch1,branch2,...>
+            --chunkSize <size>
+            --compressor <compressor:opt1=val1,opt2=val2,...>
+            --resultsFile <resultsFile>
+            [--decompFile <decompFile>]
 ```
 
-- `--input-file <inFile>`   The path to the `.root` file containing the data to be compressed
-- `--tree-name <treename>`  The name of the TTree in `<file>`
-- `--branch-names <branch1,branch2,...>`    The branches to read from `<treename>`, as a comma-separated list
-- `--chunk-size <size>`     The amount of data to compress at a time, in bytes
-- `--compressor <compressor,opt1,opt2,...>` The compressor to use and its arguments, as a comma-separated list
-- `[--results-file <resFile>]` Benchmark metrics will be written to `resFile.json`. If `resFile.json` _already exists_, then results will be _appended_ to that file. If this option is not specified, then a filename will be generated using the timestamp of the run.
+- `--inputFile <inputFile>`   The path to the `.root` file containing the data to be compressed
+- `--tree <treename>`  The name of the TTree in `<inputFile>`
+- `--branches <branch1,branch2,...>`    The branches to read from `<treename>`, as a comma-separated list
+- `--chunkSize <size>`     The amount of data to compress at a time, in bytes
+- `--compressor <compressor:opt1=1,opt2=val2,...>` The compressor to use and its arguments, as a comma-separated list of `key=value` items
+- `--resultsFile <resultsFile>` Benchmark metrics will be written to `resultsFile.jsonl`. If `resultsFile.jsonl` _already exists_, then results will be _appended_ to that file.
+- `[--decompFile <decompFile>]` Decompressed data will be written to `decompFile.root`. If `--decompFile` is not specified, data is not written.
 
 
-Results are written in JSON format. This keeps data organized and human readable, for quick inspections. Most analysis and plotting tools are able to parse JSON data. If ROOTLess is told to write benchmark results to a `.json` file that _already_ exists, 
+Results are written in JSONL format. This keeps data organized and human readable, for quick inspections. Most analysis and plotting tools are able to parse JSONL data. If LossBench is told to write benchmark results to a `.jsonl` file that _already_ exists, 
 
 ## Examples
 
-ROOTLess is currently designed around testing _individual_ compressor configurations -- that is, each time you run the program, you test _one_ compressor with _one_ particular setting. This avoids having to hard-code loops over each compressor's specific set of options in the program itself.** Iterating over _all_ possible configurations of a compressor can instead be accomplished via scripting. 
+LossBench is currently designed around testing _individual_ compressor configurations -- that is, each time you run the program, you test _one_ compressor with _one_ particular setting. This avoids having to hard-code loops over each compressor's specific set of options in the program itself.** Iterating over _all_ possible configurations of a compressor can instead be accomplished via scripting. 
 
-For example, the `BitTruncation` compressor takes two arguments: `mantissaBits` and `compressionLevel`. `mantissaBits` can be between `0` and `23`, the number of mantissa bits in a single-precision floating point value. `compressionLevel` can be between `0` and `9`, the compression levels accepted by zlib. The following script uses ROOTLess to test every combination of these settings:
+For example, the `zlib` compressor
 
 ```bash
-#!/usr/bin/env bash
+#!/bin/bash
+# Benchmark script for zlib compression with varying compression levels.
 
-# Example script: sweep BitTruncation settings over all combinations of
-# mantissaBits = 0..23 and compressionLevel = 0..9.
+# Create a timestamped results directory to store output files:
+#    results.jsonl -- results of running the benchmarks, in JSONL format
+#    benchmark.log -- logging statements output by the benchmarking program, in plain text
+# The timestamp uniquely identifies the run and prevents overwriting previous results
+timestamp=$(date +"%Y%m%d_%H%M%S")
 
-# Edit these for your setup:
-INPUT_FILE="data.root"
-TREE_NAME="Events"
-BRANCH_NAMES="AnalysisJetsAuxDyn.pt"
-CHUNK_SIZE=65536
-RESULTS_DIR="results_bittruncation_sweep"
+results_dir="results_zlib_$timestamp"
+mkdir -p "$results_dir"
 
-mkdir -p "${RESULTS_DIR}"
+results_file="$results_dir/results.jsonl"
+log_file="$results_dir/benchmark.log"
 
-for mantissaBits in {0..23}; do
-  for compressionLevel in {0..9}; do
-    COMPRESSOR_SPEC="BitTruncation,mantissaBits=${mantissaBits},compressionLevel=${compressionLevel}"
-    RESULTS_FILE="${RESULTS_DIR}/results_m${mantissaBits}_c${compressionLevel}.json"
+# Benchmark parameters
+input_file="jets.root"
+tree_name="CollectionTree"
+branches="AnalysisJetsAuxDyn.pt,AnalysisJetsAuxDyn.eta,AnalysisJetsAuxDyn.phi,AnalysisJetsAuxDyn.m"
+chunk_size=32768
 
-    echo "Running ROOTLess with mantissaBits=${mantissaBits}, compressionLevel=${compressionLevel}"
+# Run benchmark with zlib for varying compression levels
+for compression_level in {1..9}
+do
+    echo "Running benchmark with zlib compression level $compression_level..." >> "$log_file" 2>&1
 
-    ./ROOTLess \
-      --input-file "${INPUT_FILE}" \
-      --tree-name "${TREE_NAME}" \
-      --branch-names "${BRANCH_NAMES}" \
-      --chunk-size "${CHUNK_SIZE}" \
-      --compressor "${COMPRESSOR_SPEC}" \
-      --results-file "${RESULTS_FILE}"
+    ./build/lossbench \
+        --inputFile "$input_file" \
+        --tree "$tree_name" \
+        --branches "$branches" \
+        --chunkSize "$chunk_size" \
+        --compressor "zlib:compressionLevel=$compression_level" \
+        --resultsFile "$results_file" >> "$log_file" 2>&1
 
-  done
+    echo "Benchmark with zlib compression level $compression_level completed." >> "$log_file" 2>&1
 done
+
 ```
 
 **A significant limitation to this approach is that data needs to be reloaded as we iterate over different compressor configurations. Using the `TTreeReader` class dramatically reduces read time, especially for subsequent reads from the same TTree; however, this behavior is obviously still not desirable.
 
 ## Compressors
 
+- `zlib` -- Wrapper around [zlib](https://github.com/madler/zlib)
 - Custom bit truncation compressor
   - Performs bit truncation before losslessly compressing with [zlib](https://github.com/madler/zlib)
-- [SZ3: A Modular Error-bounded Lossy Compression Framework for Scientific Datasets](https://github.com/szcompressor/SZ3)
+- `sz3` -- Wrapper around [SZ3: A Modular Error-bounded Lossy Compression Framework for Scientific Datasets](https://github.com/szcompressor/SZ3)
 
 ## Metrics and Reporting
-Currently, ROOTLess collects and reports all of the following information:
+
+Currently, LossBench collects and reports all of the following information:
   - Compression ratio (original data bytes / compressed data bytes)
   - Compression throughput (MB/s)
   - Decompression throughput (MB/s)
-  - Min/max/mean pointwise absolute error
-  - Min/max/mean pointwise relative error
+  - Max/mean pointwise absolute error
+  - Max/mean pointwise relative error
   - Mean-squared error (MSE)
   - Peak signal-to-noise ratio (PSNR)
+
+The following information about JSON output is outdated. LossBench now reports metrics with JSONL, and this section needs to be updated.
+However, the example JSON output is still close to what you will see in the `.jsonl` output.
 
 The JSON results also contain the settings used for each run, so these do not need to be recorded separately.
 
@@ -140,15 +153,10 @@ Example JSON output:
 
 ## Tests
 
-Currently the `tests/` directory contains executables which were written to test individual methods as they were being developed.
-However, these do not use any unit testing framework and have not been automated via `ctest`. 
-Actual unit testing with automation is among the next significant TODO items.
+TODO
 
 ## TODOs
 
-- Decide minimum C++ and CMake required versions
-  - Remove dependency on <format>; it's so lovely but makes C++20 a hard requirement, which has implications about ROOT installations
-  - Maybe we could just do that thing people have been doing where they include <format> as a separate library?
-- Implement unit and integrated testing
-- Change compressor configuration parsing to make it easier to add new compressors
-- List supported options for each compressor
+- Add way to list supported compressors
+- Add way to list options for supported compressors
+- Add test suites with GoogleTest
