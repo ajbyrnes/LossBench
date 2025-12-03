@@ -23,7 +23,7 @@ Building should just require the standard CMake build procedure:
 ```bash
 git clone https://github.com/ajbyrnes/LossBench.git
 mkdir build
-cmake -DCMAKE_INSTALL_PREFIX=<installdir> -S LossBench -B build
+cmake -S LossBench -B build
 cmake --build build -j<numThreads>
 ```
 
