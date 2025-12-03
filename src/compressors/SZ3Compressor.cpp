@@ -3,14 +3,17 @@
 
 
 CompressedData SZ3Compressor::compress(const std::vector<float>& data) {
-    // Set _config dimensions
+    // Use a fresh config per call so SZ3 internal mutations don't persist
+    SZ3::Config config = _userConfig;
+
+    // Set config dimensions
     std::vector<size_t> dims = {data.size()};
-    _config.setDims(dims.begin(), dims.end());
+    config.setDims(dims.begin(), dims.end());
 
     // Compress
     size_t compressedSize = 0;
     char* compressedDataBuffer = SZ_compress(
-        _config,
+        config,
         data.data(),
         compressedSize
     );
@@ -32,16 +35,19 @@ CompressedData SZ3Compressor::compress(const std::vector<float>& data) {
 }
 
 std::vector<float> SZ3Compressor::decompress(const CompressedData& compressedData) {
-    // Set _config dimensions
+    // Use a fresh config per call so SZ3 internal mutations don't persist
+    SZ3::Config config = _userConfig;
+
+    // Set config dimensions
     std::vector<size_t> dims = {compressedData.numFloats};
-    _config.setDims(dims.begin(), dims.end());
+    config.setDims(dims.begin(), dims.end());
 
     // Allocate output buffer
     float* decompressedDataBuffer = nullptr;
 
     // Decompress
     SZ_decompress(
-        _config,
+        config,
         reinterpret_cast<const char*>(compressedData.data.data()),
         compressedData.data.size(),
         decompressedDataBuffer
@@ -61,128 +67,128 @@ std::vector<float> SZ3Compressor::decompress(const CompressedData& compressedDat
 }
 
 void SZ3Compressor::configure(const std::map<std::string, std::string>& options) {
-    _config = SZ3::Config();
+    _userConfig = SZ3::Config();
 
     for (const auto& [key, value] : options) {
         if (key == "cmprAlgo") {
-            _config.cmprAlgo = static_cast<uint8_t>(std::stoul(value));
-
+            _userConfig.cmprAlgo = static_cast<uint8_t>(std::stoul(value));
             // Validate
             // cmprAlgo can be between 0-6
-            if (_config.cmprAlgo > 6 || _config.cmprAlgo < 0) {
+            if (_userConfig.cmprAlgo > 6 || _userConfig.cmprAlgo < 0) {
                 throw std::invalid_argument("Invalid cmprAlgo value: " + value + ". Must be between 0 and 6.");
             }
         } else if (key == "errorBoundMode") {
-            _config.errorBoundMode = static_cast<uint8_t>(std::stoul(value));
+            _userConfig.errorBoundMode = static_cast<uint8_t>(std::stoul(value));
 
             // Validate 
             // errorBoundMode can be between 0-5
-            if (_config.errorBoundMode > 5 || _config.errorBoundMode < 0) {
+            if (_userConfig.errorBoundMode > 5 || _userConfig.errorBoundMode < 0) {
                 throw std::invalid_argument("Invalid errorBoundMode value: " + value + ". Must be between 0 and 4.");
             }
         } else if (key == "absErrorBound") {
-            _config.absErrorBound = std::stod(value);
+            _userConfig.absErrorBound = std::stod(value);
             
             // Validate
-            if (_config.absErrorBound < 0) {
+            if (_userConfig.absErrorBound < 0) {
                 throw std::invalid_argument("Invalid absErrorBound value: " + value + ". Must be non-negative.");
             }
 
         } else if (key == "relErrorBound") {
-            _config.relErrorBound = std::stod(value);
+            _userConfig.relErrorBound = std::stod(value);
 
             // Validate
-            if (_config.relErrorBound < 0) {
+            if (_userConfig.relErrorBound < 0) {
                 throw std::invalid_argument("Invalid relErrorBound value: " + value + ". Must be non-negative.");
             }
         } else if (key == "psnrErrorBound") {
-            _config.psnrErrorBound = std::stod(value);
+            _userConfig.psnrErrorBound = std::stod(value);
 
             // Validate
-            if (_config.psnrErrorBound < 0) {
+            if (_userConfig.psnrErrorBound < 0) {
                 throw std::invalid_argument("Invalid psnrErrorBound value: " + value + ". Must be non-negative.");
             }
         } else if (key == "l2normErrorBound") {
-            _config.l2normErrorBound = std::stod(value);
+            _userConfig.l2normErrorBound = std::stod(value);
 
             // Validate
-            if (_config.l2normErrorBound < 0) {
+            if (_userConfig.l2normErrorBound < 0) {
                 throw std::invalid_argument("Invalid l2normErrorBound value: " + value + ". Must be non-negative.");
             }
         } else if (key == "openmp") {
-            _config.openmp = (value == "true" || value == "1");
+            _userConfig.openmp = (value == "true" || value == "1");
         } else if (key == "quantbinCnt") {
-            _config.quantbinCnt = std::stoi(value);
+            _userConfig.quantbinCnt = std::stoi(value);
 
             // Validate
-            if (_config.quantbinCnt <= 0) {
+            if (_userConfig.quantbinCnt <= 0) {
                 throw std::invalid_argument("Invalid quantbinCnt value: " + value + ". Must be positive.");
             }
         } else if (key == "blockSize") {
-            _config.blockSize = std::stoi(value);
+            _userConfig.blockSize = std::stoi(value);
 
             // Validate
-            if (_config.blockSize <= 0) {
+            if (_userConfig.blockSize <= 0) {
                 throw std::invalid_argument("Invalid blockSize value: " + value + ". Must be positive.");
             }
         } else if (key == "lorenzo") {
-            _config.lorenzo = (value == "true" || value == "1");
+            _userConfig.lorenzo = (value == "true" || value == "1");
         } else if (key == "lorenzo2") {
-            _config.lorenzo2 = (value == "true" || value == "1");
+            _userConfig.lorenzo2 = (value == "true" || value == "1");
         } else if (key == "regression") {
-            _config.regression = (value == "true" || value == "1");
+            _userConfig.regression = (value == "true" || value == "1");
         } else if (key == "regression2") {
-            _config.regression2 = (value == "true" || value == "1");
+            _userConfig.regression2 = (value == "true" || value == "1");
         } else if (key == "interpAlgo") {
-            _config.interpAlgo = static_cast<uint8_t>(std::stoul(value));
+            _userConfig.interpAlgo = static_cast<uint8_t>(std::stoul(value));
 
             // Validate
             // interpAlgo can be between 0-1
-            if (_config.interpAlgo > 1 || _config.interpAlgo < 0) {
+            if (_userConfig.interpAlgo > 1 || _userConfig.interpAlgo < 0) {
                 throw std::invalid_argument("Invalid interpAlgo value: " + value + ". Must be between 0 and 1.");
             }
         } else if (key == "interpDirection") {
-            _config.interpDirection = static_cast<uint8_t>(std::stoul(value));
+            _userConfig.interpDirection = static_cast<uint8_t>(std::stoul(value));
 
             // Uncertain about which values are allowed
         } else if (key == "interpAnchorStride") {
-            _config.interpAnchorStride = std::stoi(value);
+            _userConfig.interpAnchorStride = std::stoi(value);
 
             // Uncertain about which values are allowed
         } else if (key == "interpAlpha") {
-            _config.interpAlpha = std::stod(value);
+            _userConfig.interpAlpha = std::stod(value);
 
             // Uncertain about which values are allowed
         } else if (key == "interpBeta") {
-            _config.interpBeta = std::stod(value);
+            _userConfig.interpBeta = std::stod(value);
 
             // Uncertain about which values are allowed
         }
     }
 
+    // _userConfig is ready for use; per-call copies are created in compress/decompress
 }
 
 std::map<std::string, std::string> SZ3Compressor::getConfig() const {
     std::map<std::string, std::string> configMap;
 
-    configMap["cmprAlgo"] = std::to_string(_config.cmprAlgo);
-    configMap["errorBoundMode"] = std::to_string(_config.errorBoundMode);
-    configMap["absErrorBound"] = std::to_string(_config.absErrorBound);
-    configMap["relErrorBound"] =  std::to_string(_config.relErrorBound);
-    configMap["psnrErrorBound"] = std::to_string(_config.psnrErrorBound);
-    configMap["l2normErrorBound"] = std::to_string(_config.l2normErrorBound);
-    configMap["openmp"] = _config.openmp ? "true" : "false";
-    configMap["quantbinCnt"] = std::to_string(_config.quantbinCnt);
-    configMap["blockSize"] = std::to_string(_config.blockSize);
-    configMap["lorenzo"] = _config.lorenzo ? "true" : "false";
-    configMap["lorenzo2"] = _config.lorenzo2 ? "true" : "false";
-    configMap["regression"] = _config.regression ? "true" : "false";
-    configMap["regression2"] = _config.regression2 ? "true" : "false";
-    configMap["interpAlgo"] = std::to_string(_config.interpAlgo);
-    configMap["interpDirection"] = std::to_string(_config.interpDirection);
-    configMap["interpAnchorStride"] = std::to_string(_config.interpAnchorStride);
-    configMap["interpAlpha"] = std::to_string(_config.interpAlpha);
-    configMap["interpBeta"] = std::to_string(_config.interpBeta);
+    configMap["cmprAlgo"] = std::to_string(_userConfig.cmprAlgo);
+    configMap["errorBoundMode"] = std::to_string(_userConfig.errorBoundMode);
+    configMap["absErrorBound"] = std::to_string(_userConfig.absErrorBound);
+    configMap["relErrorBound"] =  std::to_string(_userConfig.relErrorBound);
+    configMap["psnrErrorBound"] = std::to_string(_userConfig.psnrErrorBound);
+    configMap["l2normErrorBound"] = std::to_string(_userConfig.l2normErrorBound);
+    configMap["openmp"] = _userConfig.openmp ? "true" : "false";
+    configMap["quantbinCnt"] = std::to_string(_userConfig.quantbinCnt);
+    configMap["blockSize"] = std::to_string(_userConfig.blockSize);
+    configMap["lorenzo"] = _userConfig.lorenzo ? "true" : "false";
+    configMap["lorenzo2"] = _userConfig.lorenzo2 ? "true" : "false";
+    configMap["regression"] = _userConfig.regression ? "true" : "false";
+    configMap["regression2"] = _userConfig.regression2 ? "true" : "false";
+    configMap["interpAlgo"] = std::to_string(_userConfig.interpAlgo);
+    configMap["interpDirection"] = std::to_string(_userConfig.interpDirection);
+    configMap["interpAnchorStride"] = std::to_string(_userConfig.interpAnchorStride);
+    configMap["interpAlpha"] = std::to_string(_userConfig.interpAlpha);
+    configMap["interpBeta"] = std::to_string(_userConfig.interpBeta);
 
     return configMap;
 }

@@ -1,3 +1,4 @@
+#include <chrono>
 #include <format>
 #include <iostream>
 #include <fstream>
@@ -5,6 +6,8 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+
+#include <unistd.h>
 
 #include "interface.hpp"
 
@@ -128,6 +131,32 @@ void printArgs(const Args& args) {
     std::cout << "--------------------------------------------\n";
 }
 
+static std::string getHost() {
+    char hostname[256];
+    if (gethostname(hostname, sizeof(hostname)) == 0) {
+        return std::string(hostname);
+    } else {
+        return "unknown_host";
+    }
+}
+
+static std::string getTimestamp(bool filenameSafe=false) {
+    auto now = std::chrono::system_clock::now();
+    auto in_time_t = std::chrono::system_clock::to_time_t(now);
+    
+    std::tm tm = *std::localtime(&in_time_t);
+    char buffer[100];
+
+    if (filenameSafe) {
+        // Replace spaces with underscores for filename safety
+        std::strftime(buffer, sizeof(buffer), "%Y-%m-%d_%H-%M-%S", &tm);
+    } else {
+        std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &tm);
+    }
+
+    return std::string(buffer);
+}
+
 nlohmann::json makeBenchmarkJSON(
     const Args& args,
     const std::map<std::string, std::string>& compressorConfig,
@@ -136,6 +165,12 @@ nlohmann::json makeBenchmarkJSON(
     std::string branch)
 {
     nlohmann::json j;
+
+    // System info
+    j["system"] = {
+        {"host", getHost()},
+        {"timestamp", getTimestamp()}
+    };
 
     // Echo input configuration
     j["config"] = {

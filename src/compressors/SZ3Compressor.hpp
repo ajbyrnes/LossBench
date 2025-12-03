@@ -20,5 +20,6 @@ public:
     std::string version() const override;
     std::string usage() const override;
 private:
-    SZ3::Config _config;
+    // _userConfig stores user-specified settings; per-call copies are made in compress/decompress
+    SZ3::Config _userConfig;
 };
