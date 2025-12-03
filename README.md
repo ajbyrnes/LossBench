@@ -160,3 +160,5 @@ TODO
 - Add way to list supported compressors
 - Add way to list options for supported compressors
 - Add test suites with GoogleTest
+- Authorship
+- Liscense?
