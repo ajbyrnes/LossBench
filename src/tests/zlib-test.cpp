@@ -29,7 +29,7 @@ int main() {
     // Compress data
     CompressedData compressedData = compressor.compress(data);
     std::cout << "Original size: " << data.size() * sizeof(float) << " bytes\n";
-    std::cout << "Compressed size: " << compressedData.bytes.size() << " bytes\n";
+    std::cout << "Compressed size: " << compressedData.data.size() << " bytes\n";
 
     // Decompress data
     std::vector<float> decompressedData = compressor.decompress(compressedData);

@@ -41,8 +41,9 @@ int main(int argc, char* argv[]) {
         )};
 
         // Output results as JSON
+        std::map<std::string, std::string> compressorConfig = compressor->getConfig();
         nlohmann::json resultJSON = makeBenchmarkJSON(
-            args, metrics, compResult, branch
+            args, compressorConfig, metrics, compResult, branch
         );
         appendJSONL(args.resultsFile, resultJSON);
         std::cout << "Appended results to " << args.resultsFile << "\n";

@@ -42,7 +42,7 @@ BenchmarkResult computeBenchmarkMetrics(
     }
 
     size_t dataSizeBytes = original.size() * sizeof(float);
-    float compressionRatio = static_cast<float>(dataSizeBytes) / compResult.compressedData.bytes.size();
+    float compressionRatio = static_cast<float>(dataSizeBytes) / compResult.compressedData.data.size();
     float compressionThroughputMbps = (dataSizeBytes / (1024.0f * 1024.0f)) / (compResult.elapsed.count() / 1000.0f);
     float decompressionThroughputMbps = (dataSizeBytes / (1024.0f * 1024.0f)) / (decompResult.elapsed.count() / 1000.0f);
 

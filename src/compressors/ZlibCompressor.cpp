@@ -28,27 +28,23 @@ CompressedData ZlibCompressor::compress(const std::vector<float>& data) {
     // Return resized buffer
     compressedData.resize(maxCompressedSize);
     return {
-        .bytes = std::move(compressedData),
-        .originalSize = data.size() * sizeof(float)
+        .data = std::move(compressedData),
+        .numFloats = data.size()
     };
 }
 
 std::vector<float> ZlibCompressor::decompress(const CompressedData& compressedData) {
-    // Setup
-    if (compressedData.originalSize % sizeof(float) != 0) {
-        throw std::runtime_error("CompressedData originalSize is not aligned to sizeof(float).");
-    }
-
-    const std::size_t floatCount = compressedData.originalSize / sizeof(float);
-    uLongf outputBytes = static_cast<uLongf>(compressedData.originalSize);
+    const std::size_t floatCount = compressedData.numFloats;
+    uLongf outputBytes = static_cast<uLongf>(floatCount * sizeof(float));
     std::vector<float> decompressedData(floatCount);
 
     // Decompress
     int res = uncompress(
         reinterpret_cast<Bytef*>(decompressedData.data()),
+        // uncompress will set this to the actual output byte size; initialize with expected
         &outputBytes,
-        compressedData.bytes.data(),
-        static_cast<uLongf>(compressedData.bytes.size())
+        compressedData.data.data(),
+        static_cast<uLongf>(compressedData.data.size())
     );
 
     // Error checking
@@ -71,6 +67,12 @@ void ZlibCompressor::configure(const std::map<std::string, std::string>& options
             }
         }
     }
+}
+
+std::map<std::string, std::string> ZlibCompressor::getConfig() const {
+    return {
+        {"compressionLevel", std::to_string(_compressionLevel)}
+    };
 }
 
 std::string ZlibCompressor::name() const {

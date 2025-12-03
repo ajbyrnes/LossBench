@@ -14,6 +14,7 @@ public:
     CompressedData compress(const std::vector<float>& data) override;
     std::vector<float> decompress(const CompressedData& compressedData) override;
     void configure(const std::map<std::string, std::string>& options) override;
+    std::map<std::string, std::string> getConfig() const override;
     std::string name() const override;
     std::string description() const override;
     std::string version() const override;

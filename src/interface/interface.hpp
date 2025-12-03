@@ -33,6 +33,7 @@ void printArgs(const Args& args);
 // Build a JSON object representing benchmark outputs.
 nlohmann::json makeBenchmarkJSON(
     const Args& args,
+    const std::map<std::string, std::string>& compressorConfig,
     const BenchmarkResult& metrics,
     const CompressionResult& comp,
     std::string branch);

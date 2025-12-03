@@ -7,15 +7,57 @@ CompressedData SZ3Compressor::compress(const std::vector<float>& data) {
     std::vector<size_t> dims = {data.size()};
     _config.setDims(dims.begin(), dims.end());
 
+    // Compress
     size_t compressedSize = 0;
+    char* compressedDataBuffer = SZ_compress(
+        _config,
+        data.data(),
+        compressedSize
+    );
+
+    if (!compressedDataBuffer) {
+        throw std::runtime_error("SZ3 compression failed.");
+    }
+
+    // Convert to vector<uint8_t>
+    std::vector<uint8_t> compressedData(compressedDataBuffer, compressedDataBuffer + compressedSize);
+
+    // Free SZ3 allocated memory
+    free(compressedDataBuffer);
+
     return {
-        .bytes = std::vector<std::uint8_t>{},
-        .originalSize = data.size() * sizeof(float)
+        .data = std::move(compressedData),
+        .numFloats = data.size()
     };
 }
 
 std::vector<float> SZ3Compressor::decompress(const CompressedData& compressedData) {
-    return std::vector<float>{};
+    // Set _config dimensions
+    std::vector<size_t> dims = {compressedData.numFloats};
+    _config.setDims(dims.begin(), dims.end());
+
+    // Allocate output buffer
+    float* decompressedDataBuffer = nullptr;
+
+    // Decompress
+    SZ_decompress(
+        _config,
+        reinterpret_cast<const char*>(compressedData.data.data()),
+        compressedData.data.size(),
+        decompressedDataBuffer
+    );
+
+    if (!decompressedDataBuffer) {
+        throw std::runtime_error("SZ3 decompression failed.");
+    }
+
+    // Convert to vector<float>
+    std::vector<float> decompressedData(decompressedDataBuffer, decompressedDataBuffer + compressedData.numFloats);
+
+    // Free SZ3 allocated memory
+    free(decompressedDataBuffer);
+
+    return decompressedData;
 }
 
 void SZ3Compressor::configure(const std::map<std::string, std::string>& options) {
@@ -118,6 +160,31 @@ void SZ3Compressor::configure(const std::map<std::string, std::string>& options)
         }
     }
 
+}
+
+std::map<std::string, std::string> SZ3Compressor::getConfig() const {
+    std::map<std::string, std::string> configMap;
+
+    configMap["cmprAlgo"] = std::to_string(_config.cmprAlgo);
+    configMap["errorBoundMode"] = std::to_string(_config.errorBoundMode);
+    configMap["absErrorBound"] = std::to_string(_config.absErrorBound);
+    configMap["relErrorBound"] =  std::to_string(_config.relErrorBound);
+    configMap["psnrErrorBound"] = std::to_string(_config.psnrErrorBound);
+    configMap["l2normErrorBound"] = std::to_string(_config.l2normErrorBound);
+    configMap["openmp"] = _config.openmp ? "true" : "false";
+    configMap["quantbinCnt"] = std::to_string(_config.quantbinCnt);
+    configMap["blockSize"] = std::to_string(_config.blockSize);
+    configMap["lorenzo"] = _config.lorenzo ? "true" : "false";
+    configMap["lorenzo2"] = _config.lorenzo2 ? "true" : "false";
+    configMap["regression"] = _config.regression ? "true" : "false";
+    configMap["regression2"] = _config.regression2 ? "true" : "false";
+    configMap["interpAlgo"] = std::to_string(_config.interpAlgo);
+    configMap["interpDirection"] = std::to_string(_config.interpDirection);
+    configMap["interpAnchorStride"] = std::to_string(_config.interpAnchorStride);
+    configMap["interpAlpha"] = std::to_string(_config.interpAlpha);
+    configMap["interpBeta"] = std::to_string(_config.interpBeta);
+
+    return configMap;
 }
 
 std::string SZ3Compressor::name() const {

@@ -6,8 +6,9 @@
 #include <vector>
 
 struct CompressedData{
-    std::vector<std::uint8_t> bytes;
-    size_t originalSize;
+    std::vector<std::uint8_t> data;
+    // Number of floats represented by the compressed buffer
+    size_t numFloats;
 };
 
 // Pure abstract interface for compressors. 
@@ -27,6 +28,9 @@ public:
 
     // Parse comma-separated arguments specific to the compressor implementation.
     virtual void configure(const std::map<std::string, std::string>& options) = 0;
+
+    // Return configuration as a map<string, string>
+    virtual std::map<std::string, std::string> getConfig() const = 0;
 
     // Compressor name.
     virtual std::string name() const = 0;
