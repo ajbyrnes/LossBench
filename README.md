@@ -21,12 +21,10 @@ Additional external dependencies include:
 Building should just require the standard CMake build procedure:
 
 ```bash
-git clone 
+git clone https://github.com/ajbyrnes/LossBench.git
 mkdir build
-cd build
-cmake -DCMAKE_INSTALL_PREFIX=<installdir> -S .. -B .
-make -j<number of cores on your machine>
-make install
+cmake -DCMAKE_INSTALL_PREFIX=<installdir> -S LossBench -B build
+cmake --build build -j<numThreads>
 ```
 
 ## Usage
