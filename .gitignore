@@ -1,3 +1,14 @@
 # Data files
 data/
+results*
 *.root
+*.json
+*.jsonl
+*.log
+
+# Build files
+build/
+
+# Analysis files
+analysis/
+*.ipynb
