@@ -104,6 +104,7 @@ done
 - Custom bit truncation compressor
   - Performs bit truncation before losslessly compressing with [zlib](https://github.com/madler/zlib)
 - `sz3` -- Wrapper around [SZ3: A Modular Error-bounded Lossy Compression Framework for Scientific Datasets](https://github.com/szcompressor/SZ3)
+  - SZ3 has a dependency on [zstd](https://github.com/facebook/zstd)
 
 ## Metrics and Reporting
 
