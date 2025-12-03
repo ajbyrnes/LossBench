@@ -50,6 +50,8 @@ Results are written in JSONL format. This keeps data organized and human readabl
 
 ## Examples
 
+See the `examples` directory for a more walkthough-style example of using LossBench.
+
 LossBench is currently designed around testing _individual_ compressor configurations -- that is, each time you run the program, you test _one_ compressor with _one_ particular setting. This avoids having to hard-code loops over each compressor's specific set of options in the program itself.** Iterating over _all_ possible configurations of a compressor can instead be accomplished via scripting. 
 
 For example, the `zlib` compressor
