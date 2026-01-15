@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <stdexcept>
 #include <vector>
 
@@ -42,6 +43,26 @@ TEST(Factory, CreatesZlib) {
 // Test that factory throws on unknown compressor name
 TEST(Factory, InvalidNameThrows) {
     EXPECT_THROW(createCompressor("nonexistent"), std::invalid_argument);
+}
+
+// Test that getAvailableCompressors returns all compressors
+TEST(Factory, GetAvailableCompressors) {
+    auto compressors = getAvailableCompressors();
+
+    // Should have at least 2 compressors (zlib, zlib-trunc always available)
+    EXPECT_GE(compressors.size(), 2);
+
+    // Should be sorted
+    EXPECT_TRUE(std::is_sorted(compressors.begin(), compressors.end()));
+
+    // Should contain core compressors
+    EXPECT_NE(std::find(compressors.begin(), compressors.end(), "zlib"), compressors.end());
+    EXPECT_NE(std::find(compressors.begin(), compressors.end(), "zlib-trunc"), compressors.end());
+
+#ifdef HAS_SZ3
+    // SZ3 should be available if compiled with SZ3 support
+    EXPECT_NE(std::find(compressors.begin(), compressors.end(), "sz3"), compressors.end());
+#endif
 }
 
 // Test that configuration options are applied
