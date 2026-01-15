@@ -12,6 +12,8 @@ add_library(compressors STATIC
     Compressor.hpp
     ZlibCompressor.cpp
     ZlibCompressor.hpp
+    ZlibTruncCompressor.cpp
+    ZlibTruncCompressor.hpp
     SZ3Compressor.cpp
     SZ3Compressor.hpp
     factory.cpp
