@@ -57,14 +57,16 @@ std::vector<float> ZlibCompressor::decompress(const CompressedData& compressedDa
 }
 
 void ZlibCompressor::configure(const std::map<std::string, std::string>& options) {
-    for (const auto& option : options) {
-        if (option.first == "compressionLevel") {
-            _compressionLevel = std::stoi(option.second);
+    for (const auto& [key, value] : options) {
+        if (key == "compressionLevel") {
+            _compressionLevel = std::stoi(value);
 
             // Validate
             if (_compressionLevel < 0 || _compressionLevel > 9) {
                 throw std::runtime_error("Invalid compression level for zlib. Must be between 0 and 9.");
             }
+        } else {
+            throw std::invalid_argument("Unknown zlib option: " + key);
         }
     }
 }

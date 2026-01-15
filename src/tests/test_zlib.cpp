@@ -53,3 +53,13 @@ TEST(ZlibCompressor, Configure) {
 
     EXPECT_EQ(config["compressionLevel"], "9");
 }
+
+// Test that unknown options throw
+TEST(ZlibCompressor, UnknownOptionThrows) {
+    auto compressor = createCompressor("zlib");
+
+    EXPECT_THROW(
+        compressor->configure({{"unknownOption", "value"}}),
+        std::invalid_argument
+    );
+}

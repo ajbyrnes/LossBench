@@ -53,3 +53,13 @@ TEST(SZ3Compressor, Configure) {
 
     EXPECT_EQ(config["absErrorBound"], "0.001000");
 }
+
+// Test that unknown options throw
+TEST(SZ3Compressor, UnknownOptionThrows) {
+    auto compressor = createCompressor("sz3");
+
+    EXPECT_THROW(
+        compressor->configure({{"unknownOption", "value"}}),
+        std::invalid_argument
+    );
+}
