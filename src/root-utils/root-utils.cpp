@@ -27,7 +27,8 @@ std::vector<float> readVectorFloatBranchData(
     auto tree = file->Get<TTree>(treename.c_str());
     if (!tree) {
         throw std::runtime_error(
-            std::format("Failed to retrieve TTree '{}' from file.", treename));
+            std::format("Failed to retrieve TTree '{}' from file.", treename)
+        );
     }
 
     // Only enable the branch we need to avoid touching other types/dictionaries.
@@ -40,9 +41,17 @@ std::vector<float> readVectorFloatBranchData(
     // Force setup and check branch status
     reader.SetEntry(0);
     if (branch.GetSetupStatus() < 0) {
+        std::string actualType = "unknown";
+        if (auto* tbranch = tree->GetBranch(branchname.c_str())) {
+            actualType = tbranch->GetClassName();
+            if (actualType.empty()) {
+                actualType = tbranch->GetTitle();  // For leaf-based branches
+            }
+        }
         throw std::runtime_error(std::format(
-            "Failed to set up branch '{}' from TTree '{}' (missing or wrong type).",
-            branchname, treename)); 
+            "Failed to set up branch '{}' from TTree '{}': expected vector<float>, found '{}'.",
+            branchname, treename, actualType)
+        );
     }
 
     std::vector<float> values;
@@ -52,6 +61,13 @@ std::vector<float> readVectorFloatBranchData(
     while (reader.Next()) {
         const auto& entryValues = *branch;
         values.insert(values.end(), entryValues.begin(), entryValues.end());
+    }
+
+    if (reader.GetEntryStatus() != TTreeReader::kEntryNotFound) {
+        throw std::runtime_error(std::format(
+            "Error reading branch '{}' from TTree '{}': entry status {}",
+            branchname, treename, static_cast<int>(reader.GetEntryStatus()))
+        );
     }
 
     return values;
@@ -83,7 +99,9 @@ void createTreeWithVectorFloatBranch(
         tree.Fill();
     }
 
-    file.Write();
+    if (file.Write() == 0) {
+        throw std::runtime_error(std::format("Failed to write to file: {}", filepath));
+    }
     file.Close();
 }
 
@@ -134,5 +152,7 @@ void insertVectorFloatBranch(
 
     // Ensure the tree entry count stays aligned and write the updated tree back.
     tree->SetEntries(nEntries);
-    tree->Write("", TObject::kOverwrite);
+    if (tree->Write("", TObject::kOverwrite) == 0) {
+        throw std::runtime_error(std::format("Failed to write tree '{}' to file: {}", treename, filepath));
+    }
 }

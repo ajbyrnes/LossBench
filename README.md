@@ -27,6 +27,21 @@ cmake -S LossBench -B build
 cmake --build build -j<numThreads>
 ```
 
+```bash
+# Build
+cmake -S src -B build
+cmake --build build
+
+# Run all tests
+ctest --test-dir build
+
+# Verbose output
+ctest --test-dir build -V
+
+# Run specific test by pattern
+ctest --test-dir build -R "Factory"
+```
+
 ## Usage
 
 ```bash
