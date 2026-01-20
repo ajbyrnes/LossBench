@@ -21,6 +21,14 @@ if(HAS_SZ3)
     gtest_discover_tests(test_sz3)
 endif()
 
+# ZFP compressor tests (only if ZFP is available)
+if(HAS_ZFP)
+    add_executable(test_zfp test_zfp.cpp)
+    target_include_directories(test_zfp PRIVATE ${CMAKE_SOURCE_DIR})
+    target_link_libraries(test_zfp PRIVATE compressors GTest::gtest_main)
+    gtest_discover_tests(test_zfp)
+endif()
+
 # Interface tests
 add_executable(test_interface test_interface.cpp)
 target_include_directories(test_interface PRIVATE ${CMAKE_SOURCE_DIR})

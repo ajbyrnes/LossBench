@@ -10,6 +10,9 @@
 #ifdef HAS_SZ3
 #include "SZ3Compressor.hpp"
 #endif
+#ifdef HAS_ZFP
+#include "ZFPCompressor.hpp"
+#endif
 #include "factory.hpp"
 
 using CompressorFactory = std::unique_ptr<Compressor>(*)();
@@ -19,6 +22,9 @@ static const std::unordered_map<std::string, CompressorFactory> factories = {
     {"zlib-trunc", +[]() -> std::unique_ptr<Compressor> { return std::make_unique<ZlibTruncCompressor>(); }},
 #ifdef HAS_SZ3
     {"sz3", +[]() -> std::unique_ptr<Compressor> { return std::make_unique<SZ3Compressor>(); }},
+#endif
+#ifdef HAS_ZFP
+    {"zfp", +[]() -> std::unique_ptr<Compressor> { return std::make_unique<ZFPCompressor>(); }},
 #endif
 };
 
