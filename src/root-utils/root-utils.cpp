@@ -63,12 +63,12 @@ std::vector<float> readVectorFloatBranchData(
         values.insert(values.end(), entryValues.begin(), entryValues.end());
     }
 
-    if (reader.GetEntryStatus() != TTreeReader::kEntryNotFound) {
-        throw std::runtime_error(std::format(
-            "Error reading branch '{}' from TTree '{}': entry status {}",
-            branchname, treename, static_cast<int>(reader.GetEntryStatus()))
-        );
-    }
+    // if (reader.GetEntryStatus() == TTreeReader::kEntryNotFound) {
+    //     throw std::runtime_error(std::format(
+    //         "Error reading branch '{}' from TTree '{}': entry status {}",
+    //         branchname, treename, static_cast<int>(reader.GetEntryStatus()))
+    //     );
+    // }
 
     return values;
 }

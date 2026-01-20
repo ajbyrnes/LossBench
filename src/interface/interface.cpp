@@ -161,7 +161,6 @@ nlohmann::json makeBenchmarkJSON(
     const Args& args,
     const std::map<std::string, std::string>& compressorConfig,
     const BenchmarkResult& metrics,
-    const CompressionResult& comp,
     std::string branch)
 {
     nlohmann::json j;
@@ -186,8 +185,8 @@ nlohmann::json makeBenchmarkJSON(
 
     // Metrics and sizes
     j["results"] = {
-        {"original_size_bytes", comp.compressedData.numFloats * sizeof(float)},
-        {"compressed_size_bytes", comp.compressedData.data.size()},
+        {"original_size_bytes", metrics.originalSizeBytes},
+        {"compressed_size_bytes", metrics.compressedSizeBytes},
         {"compression_ratio", metrics.compressionRatio},
         {"compression_throughput_mbps", metrics.compressionThroughputMbps},
         {"decompression_throughput_mbps", metrics.decompressionThroughputMbps},
