@@ -35,7 +35,6 @@ nlohmann::json makeBenchmarkJSON(
     const Args& args,
     const std::map<std::string, std::string>& compressorConfig,
     const BenchmarkResult& metrics,
-    const CompressionResult& comp,
     std::string branch);
 
 // Append a JSON object as a single line to a JSONL file.

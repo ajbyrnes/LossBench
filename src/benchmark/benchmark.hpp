@@ -18,6 +18,9 @@ struct DecompressionResult {
 };
 
 struct BenchmarkResult {
+    std::size_t originalSizeBytes;
+    std::size_t compressedSizeBytes;
+
     float compressionRatio;
     float compressionThroughputMbps;
     float decompressionThroughputMbps;
@@ -46,3 +49,11 @@ BenchmarkResult computeBenchmarkMetrics(
     const std::vector<float>& original,
     const CompressionResult& compResult,
     const DecompressionResult& decompResult);
+
+// Run a chunked benchmark: compress/decompress data in chunkSizeBytes segments
+// and aggregate metrics across all chunks.
+// If chunkSizeBytes is 0 or >= total data size, processes as a single chunk.
+BenchmarkResult runChunkedBenchmark(
+    Compressor& compressor,
+    const std::vector<float>& data,
+    std::size_t chunkSizeBytes);

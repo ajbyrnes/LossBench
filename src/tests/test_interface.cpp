@@ -151,17 +151,15 @@ TEST(MakeBenchmarkJSON, HasExpectedFields) {
     std::map<std::string, std::string> compressorConfig = {{"compressionLevel", "6"}};
 
     BenchmarkResult metrics{};
+    metrics.originalSizeBytes = 400;  // 100 floats * 4 bytes
+    metrics.compressedSizeBytes = 160;
     metrics.compressionRatio = 2.5f;
     metrics.compressionThroughputMbps = 100.0f;
     metrics.decompressionThroughputMbps = 200.0f;
     metrics.absErrorMax = 0.0f;
     metrics.absErrorAvg = 0.0f;
 
-    CompressionResult comp{};
-    comp.compressedData.numFloats = 100;
-    comp.compressedData.data.resize(160);  // 400 bytes original -> 160 compressed
-
-    nlohmann::json j = makeBenchmarkJSON(args, compressorConfig, metrics, comp, "px");
+    nlohmann::json j = makeBenchmarkJSON(args, compressorConfig, metrics, "px");
 
     // Check structure exists
     EXPECT_TRUE(j.contains("system"));
