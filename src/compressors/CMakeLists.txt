@@ -10,6 +10,9 @@ if(PkgConfig_FOUND)
 endif()
 find_package(SZ3 QUIET)
 
+# ZFP is optional
+find_package(zfp QUIET)
+
 # Base compressor sources (always included)
 set(COMPRESSOR_SOURCES
     Compressor.hpp
@@ -35,6 +38,17 @@ else()
     set(HAS_SZ3 FALSE)
 endif()
 
+# Add ZFP if available
+if(zfp_FOUND)
+    message(STATUS "ZFP found - enabling ZFP compressor")
+    list(APPEND COMPRESSOR_SOURCES ZFPCompressor.cpp ZFPCompressor.hpp)
+    list(APPEND COMPRESSOR_LIBS zfp::zfp)
+    set(HAS_ZFP TRUE)
+else()
+    message(STATUS "ZFP not found - ZFP compressor disabled")
+    set(HAS_ZFP FALSE)
+endif()
+
 add_library(compressors STATIC ${COMPRESSOR_SOURCES})
 
 target_include_directories(
@@ -48,6 +62,10 @@ target_link_libraries(compressors PUBLIC ${COMPRESSOR_LIBS})
 if(HAS_SZ3)
     target_compile_definitions(compressors PUBLIC HAS_SZ3)
 endif()
+if(HAS_ZFP)
+    target_compile_definitions(compressors PUBLIC HAS_ZFP)
+endif()
 
 # Propagate to parent scope for tests
 set(HAS_SZ3 ${HAS_SZ3} PARENT_SCOPE)
+set(HAS_ZFP ${HAS_ZFP} PARENT_SCOPE)
