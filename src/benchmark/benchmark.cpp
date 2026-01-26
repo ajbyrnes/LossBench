@@ -85,7 +85,8 @@ BenchmarkResult computeBenchmarkMetrics(
         .relErrorMax = relErrorMax,
         .relErrorAvg = relErrorAvg,
         .MSE = MSE,
-        .PSNR = PSNR
+        .PSNR = PSNR,
+        .decompressedData = decompResult.decompressedData
     };
 }
 
@@ -122,6 +123,10 @@ BenchmarkResult runChunkedBenchmark(
     double relErrorSum = 0.0;
     double mseSum = 0.0;
 
+    // Accumulate all decompressed data
+    std::vector<float> allDecompressedData;
+    allDecompressedData.reserve(totalFloats);
+
     // Process data in chunks
     for (std::size_t offset = 0; offset < totalFloats; offset += floatsPerChunk) {
         std::size_t chunkFloats = std::min(floatsPerChunk, totalFloats - offset);
@@ -143,6 +148,10 @@ BenchmarkResult runChunkedBenchmark(
         auto decompEnd = std::chrono::high_resolution_clock::now();
 
         totalDecompressionTime += decompEnd - decompStart;
+
+        // Accumulate decompressed data
+        allDecompressedData.insert(allDecompressedData.end(),
+            decompressedChunk.begin(), decompressedChunk.end());
 
         // Compute error metrics for this chunk
         for (std::size_t i = 0; i < chunkFloats; ++i) {
@@ -180,6 +189,7 @@ BenchmarkResult runChunkedBenchmark(
         .relErrorMax = relErrorMax,
         .relErrorAvg = relErrorAvg,
         .MSE = MSE,
-        .PSNR = PSNR
+        .PSNR = PSNR,
+        .decompressedData = std::move(allDecompressedData)
     };
 }

@@ -19,6 +19,13 @@ void insertVectorFloatBranch(
     const std::string& branchname,
     const std::vector<std::vector<float>>& branchValues);
 
+// Read entry sizes from a branch, returning the number of floats in each entry.
+// This allows reconstruction of the nested vector structure after decompression.
+std::vector<std::size_t> readBranchEntrySizes(
+    const std::string& filepath,
+    const std::string& treename,
+    const std::string& branchname);
+
 // Create a new ROOT file with a tree that already contains one vector<float>
 // branch. This sets the initial entry count so additional branches can be
 // appended later via insertVectorFloatBranch.

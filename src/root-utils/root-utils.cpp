@@ -73,6 +73,59 @@ std::vector<float> readVectorFloatBranchData(
     return values;
 }
 
+std::vector<std::size_t> readBranchEntrySizes(
+    const std::string& filepath,
+    const std::string& treename,
+    const std::string& branchname
+)
+{
+    // Open file
+    auto file = std::unique_ptr<TFile>(TFile::Open(filepath.c_str(), "READ"));
+    if (!file || file->IsZombie()) {
+        throw std::runtime_error(std::format("Failed to open file: {}", filepath));
+    }
+
+    // Open TTree
+    auto tree = file->Get<TTree>(treename.c_str());
+    if (!tree) {
+        throw std::runtime_error(
+            std::format("Failed to retrieve TTree '{}' from file.", treename)
+        );
+    }
+
+    // Only enable the branch we need
+    tree->SetBranchStatus("*", 0);
+    tree->SetBranchStatus(branchname.c_str(), 1);
+
+    TTreeReader reader(tree);
+    TTreeReaderValue<std::vector<float>> branch(reader, branchname.c_str());
+
+    // Force setup and check branch status
+    reader.SetEntry(0);
+    if (branch.GetSetupStatus() < 0) {
+        std::string actualType = "unknown";
+        if (auto* tbranch = tree->GetBranch(branchname.c_str())) {
+            actualType = tbranch->GetClassName();
+            if (actualType.empty()) {
+                actualType = tbranch->GetTitle();
+            }
+        }
+        throw std::runtime_error(std::format(
+            "Failed to set up branch '{}' from TTree '{}': expected vector<float>, found '{}'.",
+            branchname, treename, actualType)
+        );
+    }
+
+    std::vector<std::size_t> sizes;
+
+    // Loop over all entries and record sizes
+    while (reader.Next()) {
+        sizes.push_back(branch->size());
+    }
+
+    return sizes;
+}
+
 void createTreeWithVectorFloatBranch(
     const std::string& filepath,
     const std::string& treename,

@@ -2,6 +2,7 @@
 data/
 results*
 *.root
+!tests/test.root
 *.json
 *.jsonl
 *.log

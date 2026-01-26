@@ -32,6 +32,8 @@ struct BenchmarkResult {
 
     float MSE;
     float PSNR;
+
+    std::vector<float> decompressedData;
 };
 
 // Run compression while measuring wall-clock time.
