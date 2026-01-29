@@ -13,6 +13,7 @@ struct Args {
     std::string treename;
     std::vector<std::string> branches;
     std::size_t chunkSize{0};
+    std::size_t iterations{1};
 
     std::string compressor;
     std::map<std::string, std::string> compressionOptions;

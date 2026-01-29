@@ -81,6 +81,9 @@ Args parseArgs(int argc, char* argv[]) {
         } else if (arg == "--decompFile" && i + 1 < argc) {
             // [--decompFile <file>]
             args.decompFile = argv[++i];
+        } else if (arg == "--iterations" && i + 1 < argc) {
+            // [--iterations <number>]
+            args.iterations = std::stoul(argv[++i]);
         } else {
             throw std::runtime_error("Unknown or incomplete argument: " + arg);
         }
@@ -104,7 +107,8 @@ void printUsage() {
                  "--chunkSize <number> "
                  "--compressor <name[:opt1=val,opt2=val,...]> "
                  "[--resultsFile <file>] "
-                 "[--decompFile <file>]"
+                 "[--decompFile <file>] "
+                 "[--iterations <number>]"
                  "\n";
 }
 
@@ -117,6 +121,7 @@ void printArgs(const Args& args) {
         std::cout << "  " << branch  << std::endl;
     }
     std::cout << "Chunk size: " << args.chunkSize << "\n";
+    std::cout << "Iterations: " << args.iterations << "\n";
     std::cout << "Compressor: " << args.compressor << "\n";
     std::cout << "Compression options:\n";
     for (const auto& [key, value] : args.compressionOptions) {
@@ -177,6 +182,7 @@ nlohmann::json makeBenchmarkJSON(
         {"tree", args.treename},
         {"branches", branch},
         {"chunk_size", args.chunkSize},
+        {"iterations", args.iterations},
         {"compressor", args.compressor},
         {"compressor_config", compressorConfig},
         {"results_file", args.resultsFile},
@@ -195,7 +201,10 @@ nlohmann::json makeBenchmarkJSON(
         {"rel_error_max", metrics.relErrorMax},
         {"rel_error_avg", metrics.relErrorAvg},
         {"mse", metrics.MSE},
-        {"psnr", metrics.PSNR}
+        {"psnr", metrics.PSNR},
+        {"ks_statistic", metrics.ksStatistic},
+        {"earth_mover_distance", metrics.earthMoverDistance},
+        {"jensen_shannon_divergence", metrics.jensenShannonDivergence}
     };
 
     return j;

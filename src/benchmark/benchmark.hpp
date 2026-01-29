@@ -33,6 +33,11 @@ struct BenchmarkResult {
     float MSE;
     float PSNR;
 
+    // Distribution-based metrics
+    float ksStatistic;              // Kolmogorov-Smirnov statistic
+    float earthMoverDistance;       // Earth Mover's (Wasserstein-1) distance
+    float jensenShannonDivergence;  // Jensen-Shannon divergence
+
     std::vector<float> decompressedData;
 };
 
@@ -55,7 +60,9 @@ BenchmarkResult computeBenchmarkMetrics(
 // Run a chunked benchmark: compress/decompress data in chunkSizeBytes segments
 // and aggregate metrics across all chunks.
 // If chunkSizeBytes is 0 or >= total data size, processes as a single chunk.
+// If iterations > 1, runs the benchmark multiple times and averages timing results.
 BenchmarkResult runChunkedBenchmark(
     Compressor& compressor,
     const std::vector<float>& data,
-    std::size_t chunkSizeBytes);
+    std::size_t chunkSizeBytes,
+    std::size_t iterations = 1);

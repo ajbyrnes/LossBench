@@ -98,7 +98,7 @@ int main(int argc, char* argv[]) {
 
             // Run chunked benchmark
             BenchmarkResult metrics{runChunkedBenchmark(
-                *compressor, data, args.chunkSize
+                *compressor, data, args.chunkSize, args.iterations
             )};
 
             // Output results as JSON
