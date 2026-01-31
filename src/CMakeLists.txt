@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 
 # Declare the project name and version
-project(LossBench VERSION 1.0.0 LANGUAGES CXX)
+project(LossBench VERSION 1.0.0 LANGUAGES CXX C)
 
 # Require C++20 standard
 set(CMAKE_CXX_STANDARD 20)
