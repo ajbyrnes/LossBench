@@ -1,13 +1,10 @@
 # Compressors library
 
-# ZLIB is required (core dependency)
-find_package(ZLIB REQUIRED)
+# zstd is required (core dependency)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(ZSTD REQUIRED IMPORTED_TARGET libzstd)
 
 # SZ3 is optional
-find_package(PkgConfig QUIET)
-if(PkgConfig_FOUND)
-    pkg_check_modules(ZSTD QUIET IMPORTED_TARGET libzstd)
-endif()
 find_package(SZ3 QUIET)
 
 # ZFP is optional
@@ -16,22 +13,22 @@ find_package(zfp QUIET)
 # Base compressor sources (always included)
 set(COMPRESSOR_SOURCES
     Compressor.hpp
-    ZlibCompressor.cpp
-    ZlibCompressor.hpp
-    ZlibTruncCompressor.cpp
-    ZlibTruncCompressor.hpp
+    ZstdCompressor.cpp
+    ZstdCompressor.hpp
+    ZstdTruncCompressor.cpp
+    ZstdTruncCompressor.hpp
     factory.cpp
     factory.hpp
 )
 
 # Base link libraries
-set(COMPRESSOR_LIBS ZLIB::ZLIB)
+set(COMPRESSOR_LIBS PkgConfig::ZSTD)
 
 # Add SZ3 if available
-if(SZ3_FOUND AND ZSTD_FOUND)
+if(SZ3_FOUND)
     message(STATUS "SZ3 found - enabling SZ3 compressor")
     list(APPEND COMPRESSOR_SOURCES SZ3Compressor.cpp SZ3Compressor.hpp)
-    list(APPEND COMPRESSOR_LIBS SZ3::SZ3 PkgConfig::ZSTD)
+    list(APPEND COMPRESSOR_LIBS SZ3::SZ3)
     set(HAS_SZ3 TRUE)
 else()
     message(STATUS "SZ3 not found - SZ3 compressor disabled")

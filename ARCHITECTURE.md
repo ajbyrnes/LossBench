@@ -21,8 +21,8 @@ cmake --build build -j$(nproc)
 - C++20 compiler
 - ROOT Data Analysis Framework
 - nlohmann/json
-- zlib
-- SZ3 (which requires zstd)
+- zstd
+- SZ3 (optional)
 
 ## Running the Tool
 
@@ -47,7 +47,8 @@ src/
 ├── compressors/           # Compression implementations
 │   ├── Compressor.hpp     # Abstract interface (compress, decompress, configure)
 │   ├── factory.cpp        # Factory function createCompressor(name)
-│   ├── ZlibCompressor.*   # Lossless zlib wrapper (option: compressionLevel)
+│   ├── ZstdCompressor.*   # Lossless zstd wrapper (option: compressionLevel)
+│   ├── ZstdTruncCompressor.*  # Bit truncation + zstd (options: compressionLevel, truncBits)
 │   └── SZ3Compressor.*    # Error-bounded lossy SZ3 wrapper
 ├── benchmark/             # Timing and metrics computation
 │   └── benchmark.*        # timedCompress, timedDecompress, computeBenchmarkMetrics
@@ -72,5 +73,6 @@ src/
 
 ## Current Compressors
 
-- `zlib` - Lossless, option: `compressionLevel` (1-9, default 6)
+- `zstd` - Lossless, option: `compressionLevel` (1-22, default 3)
+- `zstd-trunc` - Bit truncation + zstd, options: `compressionLevel` (1-22), `truncBits` (0-23)
 - `sz3` - Error-bounded lossy (SZ3 framework), configurable error bounds and modes
