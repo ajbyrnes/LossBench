@@ -8,8 +8,8 @@
 #include "compressors/factory.hpp"
 
 // Test that compressing then decompressing returns the original data
-TEST(ZlibCompressor, RoundTrip) {
-    auto compressor = createCompressor("zlib");
+TEST(ZstdCompressor, RoundTrip) {
+    auto compressor = createCompressor("zstd");
 
     std::vector<float> original = {1.0f, 2.5f, 3.14159f, -42.0f, 0.0f};
 
@@ -23,8 +23,8 @@ TEST(ZlibCompressor, RoundTrip) {
 }
 
 // Test that empty input is handled gracefully
-TEST(ZlibCompressor, EmptyInput) {
-    auto compressor = createCompressor("zlib");
+TEST(ZstdCompressor, EmptyInput) {
+    auto compressor = createCompressor("zstd");
 
     std::vector<float> empty;
     auto compressed = compressor->compress(empty);
@@ -34,10 +34,10 @@ TEST(ZlibCompressor, EmptyInput) {
 }
 
 // Test that factory creates a compressor with the correct name
-TEST(Factory, CreatesZlib) {
-    auto compressor = createCompressor("zlib");
+TEST(Factory, CreatesZstd) {
+    auto compressor = createCompressor("zstd");
 
-    EXPECT_EQ(compressor->name(), "zlib");
+    EXPECT_EQ(compressor->name(), "zstd");
 }
 
 // Test that factory throws on unknown compressor name
@@ -49,15 +49,15 @@ TEST(Factory, InvalidNameThrows) {
 TEST(Factory, GetAvailableCompressors) {
     auto compressors = getAvailableCompressors();
 
-    // Should have at least 2 compressors (zlib, zlib-trunc always available)
+    // Should have at least 2 compressors (zstd, zstd-trunc always available)
     EXPECT_GE(compressors.size(), 2);
 
     // Should be sorted
     EXPECT_TRUE(std::is_sorted(compressors.begin(), compressors.end()));
 
     // Should contain core compressors
-    EXPECT_NE(std::find(compressors.begin(), compressors.end(), "zlib"), compressors.end());
-    EXPECT_NE(std::find(compressors.begin(), compressors.end(), "zlib-trunc"), compressors.end());
+    EXPECT_NE(std::find(compressors.begin(), compressors.end(), "zstd"), compressors.end());
+    EXPECT_NE(std::find(compressors.begin(), compressors.end(), "zstd-trunc"), compressors.end());
 
 #ifdef HAS_SZ3
     // SZ3 should be available if compiled with SZ3 support
@@ -66,8 +66,8 @@ TEST(Factory, GetAvailableCompressors) {
 }
 
 // Test that configuration options are applied
-TEST(ZlibCompressor, Configure) {
-    auto compressor = createCompressor("zlib");
+TEST(ZstdCompressor, Configure) {
+    auto compressor = createCompressor("zstd");
 
     compressor->configure({{"compressionLevel", "9"}});
     auto config = compressor->getConfig();
@@ -76,8 +76,8 @@ TEST(ZlibCompressor, Configure) {
 }
 
 // Test that unknown options throw
-TEST(ZlibCompressor, UnknownOptionThrows) {
-    auto compressor = createCompressor("zlib");
+TEST(ZstdCompressor, UnknownOptionThrows) {
+    auto compressor = createCompressor("zstd");
 
     EXPECT_THROW(
         compressor->configure({{"unknownOption", "value"}}),

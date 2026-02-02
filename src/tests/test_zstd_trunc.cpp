@@ -8,8 +8,8 @@
 #include "compressors/factory.hpp"
 
 // Test roundtrip with no truncation (should be lossless)
-TEST(ZlibTruncCompressor, RoundTripNoTruncation) {
-    auto compressor = createCompressor("zlib-trunc");
+TEST(ZstdTruncCompressor, RoundTripNoTruncation) {
+    auto compressor = createCompressor("zstd-trunc");
     compressor->configure({{"truncBits", "0"}});
 
     std::vector<float> original = {1.0f, 2.5f, 3.14159f, -42.0f, 0.0f};
@@ -24,8 +24,8 @@ TEST(ZlibTruncCompressor, RoundTripNoTruncation) {
 }
 
 // Test roundtrip with truncation (lossy)
-TEST(ZlibTruncCompressor, RoundTripWithTruncation) {
-    auto compressor = createCompressor("zlib-trunc");
+TEST(ZstdTruncCompressor, RoundTripWithTruncation) {
+    auto compressor = createCompressor("zstd-trunc");
     compressor->configure({{"truncBits", "8"}});
 
     std::vector<float> original = {1.0f, 2.5f, 3.14159f, -42.0f, 0.0f};
@@ -41,8 +41,8 @@ TEST(ZlibTruncCompressor, RoundTripWithTruncation) {
 }
 
 // Test that empty input is handled gracefully
-TEST(ZlibTruncCompressor, EmptyInput) {
-    auto compressor = createCompressor("zlib-trunc");
+TEST(ZstdTruncCompressor, EmptyInput) {
+    auto compressor = createCompressor("zstd-trunc");
 
     std::vector<float> empty;
     auto compressed = compressor->compress(empty);
@@ -52,15 +52,15 @@ TEST(ZlibTruncCompressor, EmptyInput) {
 }
 
 // Test that factory creates the compressor correctly
-TEST(Factory, CreatesZlibTrunc) {
-    auto compressor = createCompressor("zlib-trunc");
+TEST(Factory, CreatesZstdTrunc) {
+    auto compressor = createCompressor("zstd-trunc");
 
-    EXPECT_EQ(compressor->name(), "zlib-trunc");
+    EXPECT_EQ(compressor->name(), "zstd-trunc");
 }
 
 // Test that configuration options are applied
-TEST(ZlibTruncCompressor, Configure) {
-    auto compressor = createCompressor("zlib-trunc");
+TEST(ZstdTruncCompressor, Configure) {
+    auto compressor = createCompressor("zstd-trunc");
 
     compressor->configure({{"compressionLevel", "9"}, {"truncBits", "12"}});
     auto config = compressor->getConfig();
@@ -70,8 +70,8 @@ TEST(ZlibTruncCompressor, Configure) {
 }
 
 // Test that unknown options throw
-TEST(ZlibTruncCompressor, UnknownOptionThrows) {
-    auto compressor = createCompressor("zlib-trunc");
+TEST(ZstdTruncCompressor, UnknownOptionThrows) {
+    auto compressor = createCompressor("zstd-trunc");
 
     EXPECT_THROW(
         compressor->configure({{"unknownOption", "value"}}),
@@ -80,8 +80,8 @@ TEST(ZlibTruncCompressor, UnknownOptionThrows) {
 }
 
 // Test that invalid truncBits throws
-TEST(ZlibTruncCompressor, InvalidTruncBitsThrows) {
-    auto compressor = createCompressor("zlib-trunc");
+TEST(ZstdTruncCompressor, InvalidTruncBitsThrows) {
+    auto compressor = createCompressor("zstd-trunc");
 
     EXPECT_THROW(
         compressor->configure({{"truncBits", "24"}}),

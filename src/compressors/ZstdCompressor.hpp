@@ -6,7 +6,7 @@
 
 #include "Compressor.hpp"
 
-class ZlibCompressor : public Compressor {
+class ZstdCompressor : public Compressor {
 public:
     CompressedData compress(const std::vector<float>& data) override;
     std::vector<float> decompress(const CompressedData& compressedData) override;
@@ -18,5 +18,5 @@ public:
     std::string usage() const override;
 
 private:
-    int _compressionLevel = 6; // Default zlib compression level
+    int _compressionLevel = 3; // Default zstd compression level
 };

@@ -5,8 +5,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "ZlibCompressor.hpp"
-#include "ZlibTruncCompressor.hpp"
+#include "ZstdCompressor.hpp"
+#include "ZstdTruncCompressor.hpp"
 #ifdef HAS_SZ3
 #include "SZ3Compressor.hpp"
 #endif
@@ -18,8 +18,8 @@
 using CompressorFactory = std::unique_ptr<Compressor>(*)();
 
 static const std::unordered_map<std::string, CompressorFactory> factories = {
-    {"zlib", +[]() -> std::unique_ptr<Compressor> { return std::make_unique<ZlibCompressor>(); }},
-    {"zlib-trunc", +[]() -> std::unique_ptr<Compressor> { return std::make_unique<ZlibTruncCompressor>(); }},
+    {"zstd", +[]() -> std::unique_ptr<Compressor> { return std::make_unique<ZstdCompressor>(); }},
+    {"zstd-trunc", +[]() -> std::unique_ptr<Compressor> { return std::make_unique<ZstdTruncCompressor>(); }},
 #ifdef HAS_SZ3
     {"sz3", +[]() -> std::unique_ptr<Compressor> { return std::make_unique<SZ3Compressor>(); }},
 #endif

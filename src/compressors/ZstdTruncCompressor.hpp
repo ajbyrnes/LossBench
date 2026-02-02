@@ -6,7 +6,7 @@
 
 #include "Compressor.hpp"
 
-class ZlibTruncCompressor : public Compressor {
+class ZstdTruncCompressor : public Compressor {
 public:
     CompressedData compress(const std::vector<float>& data) override;
     std::vector<float> decompress(const CompressedData& compressedData) override;
@@ -18,6 +18,6 @@ public:
     std::string usage() const override;
 
 private:
-    int _compressionLevel = 6;
+    int _compressionLevel = 3;
     int _truncBits = 0;  // Number of mantissa bits to truncate (0-23)
 };
