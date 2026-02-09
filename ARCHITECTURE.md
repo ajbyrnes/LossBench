@@ -23,6 +23,8 @@ cmake --build build -j$(nproc)
 - nlohmann/json
 - zstd
 - SZ3 (optional)
+- ZFP (optional)
+- SPERR (optional)
 
 ## Running the Tool
 
@@ -49,7 +51,9 @@ src/
 │   ├── factory.cpp        # Factory function createCompressor(name)
 │   ├── ZstdCompressor.*   # Lossless zstd wrapper (option: compressionLevel)
 │   ├── ZstdTruncCompressor.*  # Bit truncation + zstd (options: compressionLevel, truncBits)
-│   └── SZ3Compressor.*    # Error-bounded lossy SZ3 wrapper
+│   ├── SZ3Compressor.*    # Error-bounded lossy SZ3 wrapper
+│   ├── ZFPCompressor.*    # Lossy floating-point ZFP compression
+│   └── SPERRCompressor.*  # Wavelet-based lossy SPERR compression
 ├── benchmark/             # Timing and metrics computation
 │   └── benchmark.*        # timedCompress, timedDecompress, computeBenchmarkMetrics
 ├── interface/             # CLI parsing and JSON output
@@ -76,3 +80,5 @@ src/
 - `zstd` - Lossless, option: `compressionLevel` (1-22, default 3)
 - `zstd-trunc` - Bit truncation + zstd, options: `compressionLevel` (1-22), `truncBits` (0-23)
 - `sz3` - Error-bounded lossy (SZ3 framework), configurable error bounds and modes
+- `zfp` - Lossy floating-point compression, options: `mode` (rate/precision/accuracy/reversible), `tolerance`
+- `sperr` - Wavelet-based lossy compression, options: `mode` (bpp/psnr/pwe), `quality`

@@ -13,6 +13,9 @@
 #ifdef HAS_ZFP
 #include "ZFPCompressor.hpp"
 #endif
+#ifdef HAS_SPERR
+#include "SPERRCompressor.hpp"
+#endif
 #include "factory.hpp"
 
 using CompressorFactory = std::unique_ptr<Compressor>(*)();
@@ -25,6 +28,9 @@ static const std::unordered_map<std::string, CompressorFactory> factories = {
 #endif
 #ifdef HAS_ZFP
     {"zfp", +[]() -> std::unique_ptr<Compressor> { return std::make_unique<ZFPCompressor>(); }},
+#endif
+#ifdef HAS_SPERR
+    {"sperr", +[]() -> std::unique_ptr<Compressor> { return std::make_unique<SPERRCompressor>(); }},
 #endif
 };
 

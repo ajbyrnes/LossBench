@@ -10,6 +10,10 @@ find_package(SZ3 QUIET)
 # ZFP is optional
 find_package(zfp QUIET)
 
+# SPERR is optional (no CMake config, so we find it manually)
+find_library(SPERR_LIBRARY NAMES SPERR)
+find_path(SPERR_INCLUDE_DIR NAMES SPERR_C_API.h)
+
 # Base compressor sources (always included)
 set(COMPRESSOR_SOURCES
     Compressor.hpp
@@ -46,12 +50,32 @@ else()
     set(HAS_ZFP FALSE)
 endif()
 
+# Add SPERR if available
+if(SPERR_LIBRARY AND SPERR_INCLUDE_DIR)
+    message(STATUS "SPERR found - enabling SPERR compressor")
+    message(STATUS "  Library: ${SPERR_LIBRARY}")
+    message(STATUS "  Include: ${SPERR_INCLUDE_DIR}")
+    list(APPEND COMPRESSOR_SOURCES SPERRCompressor.cpp SPERRCompressor.hpp)
+    list(APPEND COMPRESSOR_LIBS ${SPERR_LIBRARY})
+    set(SPERR_FOUND TRUE)
+    set(HAS_SPERR TRUE)
+else()
+    message(STATUS "SPERR not found - SPERR compressor disabled")
+    set(SPERR_FOUND FALSE)
+    set(HAS_SPERR FALSE)
+endif()
+
 add_library(compressors STATIC ${COMPRESSOR_SOURCES})
 
 target_include_directories(
     compressors PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
+
+# Add SPERR include directory if found
+if(SPERR_FOUND)
+    target_include_directories(compressors PUBLIC ${SPERR_INCLUDE_DIR})
+endif()
 
 target_link_libraries(compressors PUBLIC ${COMPRESSOR_LIBS})
 
@@ -62,7 +86,11 @@ endif()
 if(HAS_ZFP)
     target_compile_definitions(compressors PUBLIC HAS_ZFP)
 endif()
+if(HAS_SPERR)
+    target_compile_definitions(compressors PUBLIC HAS_SPERR)
+endif()
 
 # Propagate to parent scope for tests
 set(HAS_SZ3 ${HAS_SZ3} PARENT_SCOPE)
 set(HAS_ZFP ${HAS_ZFP} PARENT_SCOPE)
+set(HAS_SPERR ${HAS_SPERR} PARENT_SCOPE)
