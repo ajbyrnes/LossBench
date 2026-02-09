@@ -25,14 +25,17 @@ target_link_libraries(
     interface
 )
 
-# Enable testing
-enable_testing()
-include(FetchContent)
-FetchContent_Declare(
-  googletest
-  URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
-)
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE) # harmless on Linux
-FetchContent_MakeAvailable(googletest)
+# Enable testing (optional, can be disabled with -DBUILD_TESTING=OFF)
+option(BUILD_TESTING "Build tests" ON)
+if(BUILD_TESTING)
+    enable_testing()
+    include(FetchContent)
+    FetchContent_Declare(
+      googletest
+      URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
+    )
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE) # harmless on Linux
+    FetchContent_MakeAvailable(googletest)
 
-add_subdirectory(tests)
+    add_subdirectory(tests)
+endif()
