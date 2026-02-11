@@ -25,6 +25,7 @@ cmake --build build -j$(nproc)
 - SZ3 (optional)
 - ZFP (optional)
 - SPERR (optional)
+- SZp (optional)
 
 ## Running the Tool
 
@@ -53,7 +54,8 @@ src/
 │   ├── ZstdTruncCompressor.*  # Bit truncation + zstd (options: compressionLevel, truncBits)
 │   ├── SZ3Compressor.*    # Error-bounded lossy SZ3 wrapper
 │   ├── ZFPCompressor.*    # Lossy floating-point ZFP compression
-│   └── SPERRCompressor.*  # Wavelet-based lossy SPERR compression
+│   ├── SPERRCompressor.*  # Wavelet-based lossy SPERR compression
+│   └── SZpCompressor.*   # Error-bounded lossy SZp compression with OpenMP
 ├── benchmark/             # Timing and metrics computation
 │   └── benchmark.*        # timedCompress, timedDecompress, computeBenchmarkMetrics
 ├── interface/             # CLI parsing and JSON output
@@ -82,3 +84,4 @@ src/
 - `sz3` - Error-bounded lossy (SZ3 framework), configurable error bounds and modes
 - `zfp` - Lossy floating-point compression, options: `mode` (rate/precision/accuracy/reversible), `tolerance`
 - `sperr` - Wavelet-based lossy compression, options: `mode` (bpp/psnr/pwe), `quality`
+- `szp` - Error-bounded lossy compression with OpenMP, options: `absErrBound` (default 1e-6), `blockSize` (default 128)
