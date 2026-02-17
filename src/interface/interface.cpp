@@ -203,8 +203,7 @@ nlohmann::json makeBenchmarkJSON(
         {"mse", metrics.MSE},
         {"psnr", metrics.PSNR},
         {"ks_statistic", metrics.ksStatistic},
-        {"earth_mover_distance", metrics.earthMoverDistance},
-        {"jensen_shannon_divergence", metrics.jensenShannonDivergence}
+        {"ks_p_value", metrics.ksPValue}
     };
 
     return j;

@@ -4,14 +4,42 @@
 
 #include "benchmark.hpp"
 
-// Compute the Kolmogorov-Smirnov statistic between two samples.
-// This is the maximum absolute difference between empirical CDFs.
-static float computeKSStatistic(
+// Result of a two-sample Kolmogorov-Smirnov test.
+struct KSTestResult {
+    float statistic;  // Max absolute difference between empirical CDFs
+    float pValue;     // Asymptotic p-value
+};
+
+// Compute the asymptotic p-value for the Kolmogorov-Smirnov test
+// using the survival function of the Kolmogorov distribution.
+// P(D > d) = 2 * sum_{k=1}^{inf} (-1)^{k-1} * exp(-2 * k^2 * lambda^2)
+static float kolmogorovSurvival(double lambda) {
+    if (lambda <= 0.0) return 1.0f;
+
+    double sum = 0.0;
+    for (int k = 1; k <= 100; ++k) {
+        double term = std::exp(-2.0 * k * k * lambda * lambda);
+        if (k % 2 == 1) {
+            sum += term;
+        } else {
+            sum -= term;
+        }
+        if (term < 1e-12) break;
+    }
+
+    double pValue = 2.0 * sum;
+    return static_cast<float>(std::clamp(pValue, 0.0, 1.0));
+}
+
+// Perform a two-sample Kolmogorov-Smirnov test between original and decompressed data.
+// Returns both the KS statistic and the asymptotic p-value.
+static KSTestResult computeKSTest(
     const std::vector<float>& original,
     const std::vector<float>& decompressed
 ) {
-    std::size_t n = original.size();
-    if (n == 0) return 0.0f;
+    std::size_t n1 = original.size();
+    std::size_t n2 = decompressed.size();
+    if (n1 == 0 || n2 == 0) return {0.0f, 1.0f};
 
     // Create sorted copies of both datasets
     std::vector<float> sortedOrig = original;
@@ -19,9 +47,9 @@ static float computeKSStatistic(
     std::sort(sortedOrig.begin(), sortedOrig.end());
     std::sort(sortedDecomp.begin(), sortedDecomp.end());
 
-    // Merge both sorted arrays to get all unique points for CDF comparison
+    // Merge both sorted arrays to get all points for CDF comparison
     std::vector<float> allPoints;
-    allPoints.reserve(2 * n);
+    allPoints.reserve(n1 + n2);
     allPoints.insert(allPoints.end(), sortedOrig.begin(), sortedOrig.end());
     allPoints.insert(allPoints.end(), sortedDecomp.begin(), sortedDecomp.end());
     std::sort(allPoints.begin(), allPoints.end());
@@ -31,109 +59,22 @@ static float computeKSStatistic(
 
     for (float x : allPoints) {
         // Advance pointers to count values <= x
-        while (iOrig < n && sortedOrig[iOrig] <= x) ++iOrig;
-        while (iDecomp < n && sortedDecomp[iDecomp] <= x) ++iDecomp;
+        while (iOrig < n1 && sortedOrig[iOrig] <= x) ++iOrig;
+        while (iDecomp < n2 && sortedDecomp[iDecomp] <= x) ++iDecomp;
 
         // Empirical CDFs at point x
-        float cdfOrig = static_cast<float>(iOrig) / n;
-        float cdfDecomp = static_cast<float>(iDecomp) / n;
+        float cdfOrig = static_cast<float>(iOrig) / n1;
+        float cdfDecomp = static_cast<float>(iDecomp) / n2;
 
         maxDiff = std::max(maxDiff, std::abs(cdfOrig - cdfDecomp));
     }
 
-    return maxDiff;
-}
+    // Compute asymptotic p-value
+    double ne = static_cast<double>(n1) * n2 / (n1 + n2);
+    double lambda = (std::sqrt(ne) + 0.12 + 0.11 / std::sqrt(ne)) * maxDiff;
+    float pValue = kolmogorovSurvival(lambda);
 
-// Compute the Earth Mover's Distance (Wasserstein-1) between two 1D samples.
-// For 1D distributions, this equals the integral of |CDF1 - CDF2|,
-// which can be computed as the sum of |sorted1[i] - sorted2[i]| / n.
-static float computeEarthMoverDistance(
-    const std::vector<float>& original,
-    const std::vector<float>& decompressed
-) {
-    std::size_t n = original.size();
-    if (n == 0) return 0.0f;
-
-    // Create sorted copies
-    std::vector<float> sortedOrig = original;
-    std::vector<float> sortedDecomp = decompressed;
-    std::sort(sortedOrig.begin(), sortedOrig.end());
-    std::sort(sortedDecomp.begin(), sortedDecomp.end());
-
-    // EMD for equal-sized 1D samples is mean absolute difference of sorted values
-    double sum = 0.0;
-    for (std::size_t i = 0; i < n; ++i) {
-        sum += std::abs(sortedOrig[i] - sortedDecomp[i]);
-    }
-
-    return static_cast<float>(sum / n);
-}
-
-// Compute Jensen-Shannon divergence between two samples using histograms.
-// JSD = 0.5 * KL(P||M) + 0.5 * KL(Q||M), where M = 0.5 * (P + Q)
-static float computeJensenShannonDivergence(
-    const std::vector<float>& original,
-    const std::vector<float>& decompressed,
-    std::size_t numBins = 100
-) {
-    std::size_t n = original.size();
-    if (n == 0) return 0.0f;
-
-    // Find global min/max across both datasets
-    float minVal = std::min(
-        *std::min_element(original.begin(), original.end()),
-        *std::min_element(decompressed.begin(), decompressed.end())
-    );
-    float maxVal = std::max(
-        *std::max_element(original.begin(), original.end()),
-        *std::max_element(decompressed.begin(), decompressed.end())
-    );
-
-    // Handle edge case where all values are the same
-    if (maxVal == minVal) {
-        return 0.0f;  // Identical distributions
-    }
-
-    float binWidth = (maxVal - minVal) / numBins;
-
-    // Build histograms (counts)
-    std::vector<double> histOrig(numBins, 0.0);
-    std::vector<double> histDecomp(numBins, 0.0);
-
-    auto getBin = [&](float val) -> std::size_t {
-        std::size_t bin = static_cast<std::size_t>((val - minVal) / binWidth);
-        return std::min(bin, numBins - 1);  // Clamp to last bin
-    };
-
-    for (std::size_t i = 0; i < n; ++i) {
-        histOrig[getBin(original[i])] += 1.0;
-        histDecomp[getBin(decompressed[i])] += 1.0;
-    }
-
-    // Convert to probability distributions (normalize)
-    for (std::size_t i = 0; i < numBins; ++i) {
-        histOrig[i] /= n;
-        histDecomp[i] /= n;
-    }
-
-    // Compute JSD = 0.5 * KL(P||M) + 0.5 * KL(Q||M), where M = 0.5*(P+Q)
-    double jsd = 0.0;
-    for (std::size_t i = 0; i < numBins; ++i) {
-        double p = histOrig[i];
-        double q = histDecomp[i];
-        double m = 0.5 * (p + q);
-
-        if (m > 0.0) {
-            if (p > 0.0) {
-                jsd += 0.5 * p * std::log2(p / m);
-            }
-            if (q > 0.0) {
-                jsd += 0.5 * q * std::log2(q / m);
-            }
-        }
-    }
-
-    return static_cast<float>(jsd);
+    return {maxDiff, pValue};
 }
 
 CompressionResult timedCompress(
@@ -208,10 +149,8 @@ BenchmarkResult computeBenchmarkMetrics(
 
     float PSNR = (MSE > 0.0f) ? 10.0f * std::log10((range * range) / MSE) : std::numeric_limits<float>::infinity();
 
-    // Compute distribution-based metrics
-    float ksStatistic = computeKSStatistic(original, decompResult.decompressedData);
-    float earthMoverDistance = computeEarthMoverDistance(original, decompResult.decompressedData);
-    float jensenShannonDivergence = computeJensenShannonDivergence(original, decompResult.decompressedData);
+    // Compute distribution-based metrics (two-sample KS test)
+    auto ksResult = computeKSTest(original, decompResult.decompressedData);
 
     return {
         .originalSizeBytes = dataSizeBytes,
@@ -225,9 +164,8 @@ BenchmarkResult computeBenchmarkMetrics(
         .relErrorAvg = relErrorAvg,
         .MSE = MSE,
         .PSNR = PSNR,
-        .ksStatistic = ksStatistic,
-        .earthMoverDistance = earthMoverDistance,
-        .jensenShannonDivergence = jensenShannonDivergence,
+        .ksStatistic = ksResult.statistic,
+        .ksPValue = ksResult.pValue,
         .decompressedData = decompResult.decompressedData
     };
 }
@@ -353,10 +291,8 @@ BenchmarkResult runChunkedBenchmark(
 
     float PSNR = (MSE > 0.0f) ? 10.0f * std::log10((globalRange * globalRange) / MSE) : std::numeric_limits<float>::infinity();
 
-    // Compute distribution-based metrics on the full data
-    float ksStatistic = computeKSStatistic(data, allDecompressedData);
-    float earthMoverDistance = computeEarthMoverDistance(data, allDecompressedData);
-    float jensenShannonDivergence = computeJensenShannonDivergence(data, allDecompressedData);
+    // Compute distribution-based metrics on the full data (two-sample KS test)
+    auto ksResult = computeKSTest(data, allDecompressedData);
 
     return {
         .originalSizeBytes = totalOriginalBytes,
@@ -370,9 +306,8 @@ BenchmarkResult runChunkedBenchmark(
         .relErrorAvg = relErrorAvg,
         .MSE = MSE,
         .PSNR = PSNR,
-        .ksStatistic = ksStatistic,
-        .earthMoverDistance = earthMoverDistance,
-        .jensenShannonDivergence = jensenShannonDivergence,
+        .ksStatistic = ksResult.statistic,
+        .ksPValue = ksResult.pValue,
         .decompressedData = std::move(allDecompressedData)
     };
 }

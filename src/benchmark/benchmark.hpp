@@ -33,10 +33,9 @@ struct BenchmarkResult {
     float MSE;
     float PSNR;
 
-    // Distribution-based metrics
-    float ksStatistic;              // Kolmogorov-Smirnov statistic
-    float earthMoverDistance;       // Earth Mover's (Wasserstein-1) distance
-    float jensenShannonDivergence;  // Jensen-Shannon divergence
+    // Distribution-based metrics (two-sample KS test)
+    float ksStatistic;              // Kolmogorov-Smirnov test statistic
+    float ksPValue;                 // KS test p-value
 
     std::vector<float> decompressedData;
 };
