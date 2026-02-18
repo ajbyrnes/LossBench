@@ -36,6 +36,13 @@ struct BenchmarkResult {
     // Distribution-based metrics (two-sample KS test)
     float ksStatistic;              // Kolmogorov-Smirnov test statistic
     float ksPValue;                 // KS test p-value
+    float wassersteinDistance;      // Earth Mover's Distance (Wasserstein-1)
+
+    // Quantile shifts (absolute difference between original and decompressed quantiles)
+    float q5Shift;
+    float q50Shift;
+    float q95Shift;
+    float q99Shift;
 
     std::vector<float> decompressedData;
 };

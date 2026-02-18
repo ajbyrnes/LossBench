@@ -31,21 +31,14 @@ static float kolmogorovSurvival(double lambda) {
     return static_cast<float>(std::clamp(pValue, 0.0, 1.0));
 }
 
-// Perform a two-sample Kolmogorov-Smirnov test between original and decompressed data.
-// Returns both the KS statistic and the asymptotic p-value.
+// Perform a two-sample Kolmogorov-Smirnov test using pre-sorted data.
 static KSTestResult computeKSTest(
-    const std::vector<float>& original,
-    const std::vector<float>& decompressed
+    const std::vector<float>& sortedOrig,
+    const std::vector<float>& sortedDecomp
 ) {
-    std::size_t n1 = original.size();
-    std::size_t n2 = decompressed.size();
+    std::size_t n1 = sortedOrig.size();
+    std::size_t n2 = sortedDecomp.size();
     if (n1 == 0 || n2 == 0) return {0.0f, 1.0f};
-
-    // Create sorted copies of both datasets
-    std::vector<float> sortedOrig = original;
-    std::vector<float> sortedDecomp = decompressed;
-    std::sort(sortedOrig.begin(), sortedOrig.end());
-    std::sort(sortedDecomp.begin(), sortedDecomp.end());
 
     // Merge both sorted arrays to get all points for CDF comparison
     std::vector<float> allPoints;
@@ -71,16 +64,63 @@ static KSTestResult computeKSTest(
 
     // Compute asymptotic p-value
     double ne = static_cast<double>(n1) * n2 / (n1 + n2);
-    double lambda = (std::sqrt(ne) + 0.12 + 0.11 / std::sqrt(ne)) * maxDiff;
+    double lambda = std::sqrt(ne) * maxDiff;
     float pValue = kolmogorovSurvival(lambda);
 
     return {maxDiff, pValue};
 }
 
+// Compute the Earth Mover's Distance (Wasserstein-1) using pre-sorted data.
+// For equal-sized 1D samples: mean absolute difference of sorted values.
+static float computeEarthMoverDistance(
+    const std::vector<float>& sortedOrig,
+    const std::vector<float>& sortedDecomp
+) {
+    std::size_t n = sortedOrig.size();
+    if (n == 0) return 0.0f;
+
+    double sum = 0.0;
+    for (std::size_t i = 0; i < n; ++i) {
+        sum += std::abs(sortedOrig[i] - sortedDecomp[i]);
+    }
+
+    return static_cast<float>(sum / n);
+}
+
+// Compute a quantile from a sorted vector using linear interpolation.
+static float quantile(const std::vector<float>& sorted, double p) {
+    if (sorted.empty()) return 0.0f;
+    double idx = p * (sorted.size() - 1);
+    std::size_t lo = static_cast<std::size_t>(idx);
+    std::size_t hi = std::min(lo + 1, sorted.size() - 1);
+    double frac = idx - lo;
+    return static_cast<float>(sorted[lo] * (1.0 - frac) + sorted[hi] * frac);
+}
+
+// Compute absolute shift in quantiles using pre-sorted data.
+struct QuantileShifts {
+    float q5;
+    float q50;
+    float q95;
+    float q99;
+};
+
+static QuantileShifts computeQuantileShifts(
+    const std::vector<float>& sortedOrig,
+    const std::vector<float>& sortedDecomp
+) {
+    return {
+        std::abs(quantile(sortedOrig, 0.05) - quantile(sortedDecomp, 0.05)),
+        std::abs(quantile(sortedOrig, 0.50) - quantile(sortedDecomp, 0.50)),
+        std::abs(quantile(sortedOrig, 0.95) - quantile(sortedDecomp, 0.95)),
+        std::abs(quantile(sortedOrig, 0.99) - quantile(sortedDecomp, 0.99))
+    };
+}
+
 CompressionResult timedCompress(
     Compressor& compressor,
     const std::vector<float>& data
-) 
+)
 {
     auto start = std::chrono::steady_clock::now();
     CompressedData compressedData = compressor.compress(data);
@@ -94,7 +134,7 @@ CompressionResult timedCompress(
 DecompressionResult timedDecompress(
     Compressor& compressor,
     const CompressedData& compressedData
-) 
+)
 {
     auto start = std::chrono::steady_clock::now();
     std::vector<float> decompressedData = compressor.decompress(compressedData);
@@ -122,10 +162,10 @@ BenchmarkResult computeBenchmarkMetrics(
     float decompressionThroughputMbps = (dataSizeBytes / (1024.0f * 1024.0f)) / (decompResult.elapsed.count() / 1000.0f);
 
     float absErrorMax = 0.0f;
-    float absErrorSum = 0.0f;
+    double absErrorSum = 0.0;
     float relErrorMax = 0.0f;
-    float relErrorSum = 0.0f;
-    float mseSum = 0.0f;
+    double relErrorSum = 0.0;
+    double mseSum = 0.0;
 
     for (size_t i = 0; i < original.size(); ++i) {
         float absError = std::abs(original[i] - decompResult.decompressedData[i]);
@@ -139,18 +179,24 @@ BenchmarkResult computeBenchmarkMetrics(
         mseSum += absError * absError;
     }
 
-    float absErrorAvg = absErrorSum / original.size();
-    float relErrorAvg = relErrorSum / original.size();
-    float MSE = mseSum / original.size();
+    float absErrorAvg = static_cast<float>(absErrorSum / original.size());
+    float relErrorAvg = static_cast<float>(relErrorSum / original.size());
+    float MSE = static_cast<float>(mseSum / original.size());
 
-    float maxVal = *std::max_element(original.begin(), original.end());
-    float minVal = *std::min_element(original.begin(), original.end());
-    float range = maxVal - minVal;
+    // Sort once for all distribution-based metrics
+    std::vector<float> sortedOrig = original;
+    std::vector<float> sortedDecomp = decompResult.decompressedData;
+    std::sort(sortedOrig.begin(), sortedOrig.end());
+    std::sort(sortedDecomp.begin(), sortedDecomp.end());
+
+    float range = sortedOrig.back() - sortedOrig.front();
 
     float PSNR = (MSE > 0.0f) ? 10.0f * std::log10((range * range) / MSE) : std::numeric_limits<float>::infinity();
 
-    // Compute distribution-based metrics (two-sample KS test)
-    auto ksResult = computeKSTest(original, decompResult.decompressedData);
+    // Compute distribution-based metrics using pre-sorted data
+    auto ksResult = computeKSTest(sortedOrig, sortedDecomp);
+    float emd = computeEarthMoverDistance(sortedOrig, sortedDecomp);
+    auto qShifts = computeQuantileShifts(sortedOrig, sortedDecomp);
 
     return {
         .originalSizeBytes = dataSizeBytes,
@@ -166,6 +212,11 @@ BenchmarkResult computeBenchmarkMetrics(
         .PSNR = PSNR,
         .ksStatistic = ksResult.statistic,
         .ksPValue = ksResult.pValue,
+        .wassersteinDistance = emd,
+        .q5Shift = qShifts.q5,
+        .q50Shift = qShifts.q50,
+        .q95Shift = qShifts.q95,
+        .q99Shift = qShifts.q99,
         .decompressedData = decompResult.decompressedData
     };
 }
@@ -192,7 +243,7 @@ BenchmarkResult runChunkedBenchmark(
         floatsPerChunk = totalFloats;
     }
 
-    // Compute global min/max for PSNR calculation upfront
+    // Compute original data summary upfront
     float globalMax = *std::max_element(data.begin(), data.end());
     float globalMin = *std::min_element(data.begin(), data.end());
     float globalRange = globalMax - globalMin;
@@ -291,8 +342,14 @@ BenchmarkResult runChunkedBenchmark(
 
     float PSNR = (MSE > 0.0f) ? 10.0f * std::log10((globalRange * globalRange) / MSE) : std::numeric_limits<float>::infinity();
 
-    // Compute distribution-based metrics on the full data (two-sample KS test)
-    auto ksResult = computeKSTest(data, allDecompressedData);
+    // Sort once for all distribution-based metrics
+    std::vector<float> sortedOrig = data;
+    std::sort(sortedOrig.begin(), sortedOrig.end());
+    std::sort(allDecompressedData.begin(), allDecompressedData.end());
+
+    auto ksResult = computeKSTest(sortedOrig, allDecompressedData);
+    float emd = computeEarthMoverDistance(sortedOrig, allDecompressedData);
+    auto qShifts = computeQuantileShifts(sortedOrig, allDecompressedData);
 
     return {
         .originalSizeBytes = totalOriginalBytes,
@@ -308,6 +365,11 @@ BenchmarkResult runChunkedBenchmark(
         .PSNR = PSNR,
         .ksStatistic = ksResult.statistic,
         .ksPValue = ksResult.pValue,
+        .wassersteinDistance = emd,
+        .q5Shift = qShifts.q5,
+        .q50Shift = qShifts.q50,
+        .q95Shift = qShifts.q95,
+        .q99Shift = qShifts.q99,
         .decompressedData = std::move(allDecompressedData)
     };
 }
