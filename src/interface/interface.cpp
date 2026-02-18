@@ -203,7 +203,12 @@ nlohmann::json makeBenchmarkJSON(
         {"mse", metrics.MSE},
         {"psnr", metrics.PSNR},
         {"ks_statistic", metrics.ksStatistic},
-        {"ks_p_value", metrics.ksPValue}
+        {"ks_p_value", metrics.ksPValue},
+        {"wasserstein_distance", metrics.wassersteinDistance},
+        {"q5_shift", metrics.q5Shift},
+        {"q50_shift", metrics.q50Shift},
+        {"q95_shift", metrics.q95Shift},
+        {"q99_shift", metrics.q99Shift}
     };
 
     return j;
