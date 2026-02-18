@@ -1,8 +1,9 @@
+#include <algorithm>
 #include <format>
 #include <iostream>
 #include <memory>
 #include <map>
-#include <random>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -69,63 +70,79 @@ int main(int argc, char* argv[]) {
     }
 
     try {
-        // Parse command line arguments
         Args args = parseArgs(argc, argv);
         printArgs(args);
 
-        // Create compressor
-        std::unique_ptr<Compressor> compressor = createCompressor(args.compressor);
-        compressor->configure(args.compressionOptions);
+        // Track which decompFiles have been initialized: the first branch written
+        // to a path creates the ROOT file; subsequent branches are inserted.
+        // Each test should use a distinct decompFile path.
+        std::set<std::string> initializedDecompFiles;
 
-        // Track whether we've created the output file yet
-        bool decompFileCreated = false;
+        // Determine upfront whether any test writes decompressed output, so we
+        // know to read entry sizes alongside the branch data.
+        const bool anyDecompFile = std::ranges::any_of(
+            args.tests, [](const TestConfig& t) { return !t.decompFile.empty(); });
 
-        // Iterate over branches
+        // Outer loop: one branch at a time so only one branch's data is in memory.
+        // Future extension: TestConfig could carry a `branches` field specifying
+        // which branches it needs, allowing multi-branch tests (e.g. invariant mass)
+        // to load a group of branches together before running.
         for (const auto& branch : args.branches) {
-            // Read data from ROOT file
             std::cout << "Reading data for branch '" << branch << "'...\n";
-            std::vector<float> data{readVectorFloatBranchData(
-                args.dataFile, args.treename, branch
-            )};
+            std::vector<float> data = readVectorFloatBranchData(
+                args.dataFile, args.treename, branch);
 
-            // Read entry sizes if we need to write decompressed output
             std::vector<std::size_t> entrySizes;
-            if (!args.decompFile.empty()) {
-                entrySizes = readBranchEntrySizes(
-                    args.dataFile, args.treename, branch
-                );
+            if (anyDecompFile) {
+                entrySizes = readBranchEntrySizes(args.dataFile, args.treename, branch);
             }
 
-            // Run chunked benchmark
-            BenchmarkResult metrics{runChunkedBenchmark(
-                *compressor, data, args.chunkSize, args.iterations
-            )};
+            // Inner loop: run every test against this branch's data.
+            for (const auto& test : args.tests) {
+                std::cout << "  Running compressor '" << test.compressor << "'";
+                if (!test.compressionOptions.empty()) {
+                    std::cout << " (";
+                    bool first = true;
+                    for (const auto& [k, v] : test.compressionOptions) {
+                        if (!first) std::cout << ", ";
+                        std::cout << k << "=" << v;
+                        first = false;
+                    }
+                    std::cout << ")";
+                }
+                std::cout << "...\n";
 
-            // Output results as JSON
-            std::map<std::string, std::string> compressorConfig = compressor->getConfig();
-            nlohmann::json resultJSON = makeBenchmarkJSON(
-                args, compressorConfig, metrics, branch
-            );
-            appendJSONL(args.resultsFile, resultJSON);
-            std::cout << "Appended results to " << args.resultsFile << "\n";
+                std::unique_ptr<Compressor> compressor = createCompressor(test.compressor);
+                compressor->configure(test.compressionOptions);
 
-            // Write decompressed data to ROOT file if requested
-            if (!args.decompFile.empty()) {
-                std::vector<std::vector<float>> branchData = reconstructBranchData(
-                    metrics.decompressedData, entrySizes
-                );
+                BenchmarkResult metrics = runChunkedBenchmark(
+                    *compressor, data, test.chunkSize, test.iterations);
 
-                if (!decompFileCreated) {
-                    createTreeWithVectorFloatBranch(
-                        args.decompFile, args.treename, branch, branchData
-                    );
-                    decompFileCreated = true;
-                    std::cout << "Created " << args.decompFile << " with branch '" << branch << "'\n";
-                } else {
-                    insertVectorFloatBranch(
-                        args.decompFile, args.treename, branch, branchData
-                    );
-                    std::cout << "Added branch '" << branch << "' to " << args.decompFile << "\n";
+                std::map<std::string, std::string> compressorConfig = compressor->getConfig();
+                nlohmann::json resultJSON = makeBenchmarkJSON(
+                    args, test, compressorConfig, metrics, branch);
+
+                if (!args.resultsFile.empty()) {
+                    appendJSONL(args.resultsFile, resultJSON);
+                    std::cout << "  Appended results to " << args.resultsFile << "\n";
+                }
+
+                if (!test.decompFile.empty()) {
+                    std::vector<std::vector<float>> branchData =
+                        reconstructBranchData(metrics.decompressedData, entrySizes);
+
+                    if (initializedDecompFiles.count(test.decompFile) == 0) {
+                        createTreeWithVectorFloatBranch(
+                            test.decompFile, args.treename, branch, branchData);
+                        initializedDecompFiles.insert(test.decompFile);
+                        std::cout << "  Created " << test.decompFile
+                                  << " with branch '" << branch << "'\n";
+                    } else {
+                        insertVectorFloatBranch(
+                            test.decompFile, args.treename, branch, branchData);
+                        std::cout << "  Added branch '" << branch
+                                  << "' to " << test.decompFile << "\n";
+                    }
                 }
             }
         }
