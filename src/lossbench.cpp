@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 
+#include <TError.h>
+
 #include "interface.hpp"
 #include "root-utils.hpp"
 #include "factory.hpp"
@@ -31,6 +33,8 @@ std::vector<std::vector<float>> reconstructBranchData(
 }
 
 int main(int argc, char* argv[]) {
+    gErrorIgnoreLevel = kFatal; // Suppress ROOT warnings for cleaner output; handle errors via exceptions instead.
+
     // Handle info options before parsing other args
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -71,7 +75,7 @@ int main(int argc, char* argv[]) {
 
     try {
         Args args = parseArgs(argc, argv);
-        printArgs(args);
+        //printArgs(args);
 
         // Track which decompFiles have been initialized: the first branch written
         // to a path creates the ROOT file; subsequent branches are inserted.
@@ -99,7 +103,7 @@ int main(int argc, char* argv[]) {
 
             // Inner loop: run every test against this branch's data.
             for (const auto& test : args.tests) {
-                std::cout << "  Running compressor '" << test.compressor << "'";
+                std::cout << "  Compressing branch '" << branch << "' with compressor '" << test.compressor << "'";
                 if (!test.compressionOptions.empty()) {
                     std::cout << " (";
                     bool first = true;

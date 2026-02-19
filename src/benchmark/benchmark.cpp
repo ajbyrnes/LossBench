@@ -117,110 +117,6 @@ static QuantileShifts computeQuantileShifts(
     };
 }
 
-CompressionResult timedCompress(
-    Compressor& compressor,
-    const std::vector<float>& data
-)
-{
-    auto start = std::chrono::steady_clock::now();
-    CompressedData compressedData = compressor.compress(data);
-    auto end = std::chrono::steady_clock::now();
-    return {
-        .compressedData = std::move(compressedData),
-        .elapsed = end - start
-    };
-}
-
-DecompressionResult timedDecompress(
-    Compressor& compressor,
-    const CompressedData& compressedData
-)
-{
-    auto start = std::chrono::steady_clock::now();
-    std::vector<float> decompressedData = compressor.decompress(compressedData);
-    auto end = std::chrono::steady_clock::now();
-    return {
-        .decompressedData = std::move(decompressedData),
-        .elapsed = end - start
-    };
-}
-
-BenchmarkResult computeBenchmarkMetrics(
-    const std::vector<float>& original,
-    const CompressionResult& compResult,
-    const DecompressionResult& decompResult
-)
-{
-    // Number of floats should be the same before and after
-    if (original.size() != decompResult.decompressedData.size()) {
-        throw std::runtime_error("Original and decompressed data size mismatch.");
-    }
-
-    size_t dataSizeBytes = original.size() * sizeof(float);
-    float compressionRatio = static_cast<float>(dataSizeBytes) / compResult.compressedData.data.size();
-    float compressionThroughputMbps = (dataSizeBytes / (1024.0f * 1024.0f)) / (compResult.elapsed.count() / 1000.0f);
-    float decompressionThroughputMbps = (dataSizeBytes / (1024.0f * 1024.0f)) / (decompResult.elapsed.count() / 1000.0f);
-
-    float absErrorMax = 0.0f;
-    double absErrorSum = 0.0;
-    float relErrorMax = 0.0f;
-    double relErrorSum = 0.0;
-    double mseSum = 0.0;
-
-    for (size_t i = 0; i < original.size(); ++i) {
-        float absError = std::abs(original[i] - decompResult.decompressedData[i]);
-        absErrorMax = std::max(absErrorMax, absError);
-        absErrorSum += absError;
-
-        float relError = (original[i] != 0.0f) ? absError / std::abs(original[i]) : 0.0f;
-        relErrorMax = std::max(relErrorMax, relError);
-        relErrorSum += relError;
-
-        mseSum += absError * absError;
-    }
-
-    float absErrorAvg = static_cast<float>(absErrorSum / original.size());
-    float relErrorAvg = static_cast<float>(relErrorSum / original.size());
-    float MSE = static_cast<float>(mseSum / original.size());
-
-    // Sort once for all distribution-based metrics
-    std::vector<float> sortedOrig = original;
-    std::vector<float> sortedDecomp = decompResult.decompressedData;
-    std::sort(sortedOrig.begin(), sortedOrig.end());
-    std::sort(sortedDecomp.begin(), sortedDecomp.end());
-
-    float range = sortedOrig.back() - sortedOrig.front();
-
-    float PSNR = (MSE > 0.0f) ? 10.0f * std::log10((range * range) / MSE) : std::numeric_limits<float>::infinity();
-
-    // Compute distribution-based metrics using pre-sorted data
-    auto ksResult = computeKSTest(sortedOrig, sortedDecomp);
-    float emd = computeEarthMoverDistance(sortedOrig, sortedDecomp);
-    auto qShifts = computeQuantileShifts(sortedOrig, sortedDecomp);
-
-    return {
-        .originalSizeBytes = dataSizeBytes,
-        .compressedSizeBytes = compResult.compressedData.data.size(),
-        .compressionRatio = compressionRatio,
-        .compressionThroughputMbps = compressionThroughputMbps,
-        .decompressionThroughputMbps = decompressionThroughputMbps,
-        .absErrorMax = absErrorMax,
-        .absErrorAvg = absErrorAvg,
-        .relErrorMax = relErrorMax,
-        .relErrorAvg = relErrorAvg,
-        .MSE = MSE,
-        .PSNR = PSNR,
-        .ksStatistic = ksResult.statistic,
-        .ksPValue = ksResult.pValue,
-        .wassersteinDistance = emd,
-        .q5Shift = qShifts.q5,
-        .q50Shift = qShifts.q50,
-        .q95Shift = qShifts.q95,
-        .q99Shift = qShifts.q99,
-        .decompressedData = decompResult.decompressedData
-    };
-}
-
 BenchmarkResult runChunkedBenchmark(
     Compressor& compressor,
     const std::vector<float>& data,
@@ -342,14 +238,15 @@ BenchmarkResult runChunkedBenchmark(
 
     float PSNR = (MSE > 0.0f) ? 10.0f * std::log10((globalRange * globalRange) / MSE) : std::numeric_limits<float>::infinity();
 
-    // Sort once for all distribution-based metrics
+    // Sort copies for all distribution-based metrics (preserve original order in allDecompressedData)
     std::vector<float> sortedOrig = data;
+    std::vector<float> sortedDecomp = allDecompressedData;
     std::sort(sortedOrig.begin(), sortedOrig.end());
-    std::sort(allDecompressedData.begin(), allDecompressedData.end());
+    std::sort(sortedDecomp.begin(), sortedDecomp.end());
 
-    auto ksResult = computeKSTest(sortedOrig, allDecompressedData);
-    float emd = computeEarthMoverDistance(sortedOrig, allDecompressedData);
-    auto qShifts = computeQuantileShifts(sortedOrig, allDecompressedData);
+    auto ksResult = computeKSTest(sortedOrig, sortedDecomp);
+    float emd = computeEarthMoverDistance(sortedOrig, sortedDecomp);
+    auto qShifts = computeQuantileShifts(sortedOrig, sortedDecomp);
 
     return {
         .originalSizeBytes = totalOriginalBytes,
