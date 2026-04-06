@@ -162,6 +162,8 @@ void SZ3Compressor::configure(const std::map<std::string, std::string>& options)
             _userConfig.interpBeta = std::stod(value);
 
             // Uncertain about which values are allowed
+        } else {
+            throw std::invalid_argument("Unknown SZ3 option: " + key);
         }
     }
 

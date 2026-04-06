@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 
 # Declare the project name and version
-project(LossBench VERSION 1.0.0 LANGUAGES CXX)
+project(LossBench VERSION 1.0.0 LANGUAGES CXX C)
 
 # Require C++20 standard
 set(CMAKE_CXX_STANDARD 20)
@@ -25,12 +25,24 @@ target_link_libraries(
     interface
 )
 
-# Enable testing
-#include(CTest)
-#include(FetchContent)
-#FetchContent_Declare(
-#  googletest
-#  URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
-#)
-#set(gtest_force_shared_crt ON CACHE BOOL "" FORCE) # harmless on Linux
-#FetchContent_MakeAvailable(googletest)
+# Silence the ROOT header #warning about a C++ standard mismatch; 
+# the build intentionally uses C++20.
+# Considered removing the C++20 dependency,
+# but std::format from C++20 is quite useful,
+# and ROOT will presumably move to requiring C++20 in the future.
+target_compile_options(root-utils PRIVATE -Wno-cpp)
+
+# Enable testing (optional, can be disabled with -DBUILD_TESTING=OFF)
+option(BUILD_TESTING "Build tests" ON)
+if(BUILD_TESTING)
+    enable_testing()
+    include(FetchContent)
+    FetchContent_Declare(
+      googletest
+      URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
+    )
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE) # harmless on Linux
+    FetchContent_MakeAvailable(googletest)
+
+    add_subdirectory(tests)
+endif()
