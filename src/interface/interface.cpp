@@ -295,27 +295,8 @@ nlohmann::json makeBenchmarkJSON(
         {"decomp_file", test.decompFile}
     };
 
-    // Metrics and sizes
-    j["results"] = {
-        {"original_size_bytes", metrics.originalSizeBytes},
-        {"compressed_size_bytes", metrics.compressedSizeBytes},
-        {"compression_ratio", metrics.compressionRatio},
-        {"compression_throughput_mbps", metrics.compressionThroughputMbps},
-        {"decompression_throughput_mbps", metrics.decompressionThroughputMbps},
-        {"abs_error_max", metrics.absErrorMax},
-        {"abs_error_avg", metrics.absErrorAvg},
-        {"rel_error_max", metrics.relErrorMax},
-        {"rel_error_avg", metrics.relErrorAvg},
-        {"mse", metrics.MSE},
-        {"psnr", metrics.PSNR},
-        {"ks_statistic", metrics.ksStatistic},
-        {"ks_p_value", metrics.ksPValue},
-        {"wasserstein_distance", metrics.wassersteinDistance},
-        {"q5_shift", metrics.q5Shift},
-        {"q50_shift", metrics.q50Shift},
-        {"q95_shift", metrics.q95Shift},
-        {"q99_shift", metrics.q99Shift}
-    };
+    // Metrics — populated by registered metric functions
+    j["results"] = metrics.metrics;
 
     return j;
 }
