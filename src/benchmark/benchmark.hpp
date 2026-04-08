@@ -42,4 +42,5 @@ BenchmarkResult runChunkedBenchmark(
     Compressor& compressor,
     const std::vector<float>& data,
     std::size_t chunkSizeBytes,
-    std::size_t iterations = 1);
+    std::size_t iterations = 1,
+    bool normalize = false);

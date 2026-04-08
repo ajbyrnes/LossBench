@@ -19,7 +19,8 @@ BenchmarkResult runChunkedBenchmark(
     Compressor& compressor,
     const std::vector<float>& data,
     std::size_t chunkSizeBytes,
-    std::size_t iterations
+    std::size_t iterations,
+    bool normalize
 )
 {
     if (iterations == 0) {
@@ -62,6 +63,20 @@ BenchmarkResult runChunkedBenchmark(
 
             std::vector<float> chunk(data.begin() + offset, data.begin() + offset + chunkFloats);
 
+            // Normalize chunk to [0, 1] if requested
+            float normMin = 0.0f, normRange = 1.0f;
+            if (normalize) {
+                auto [minIt, maxIt] = std::minmax_element(chunk.begin(), chunk.end());
+                normMin = *minIt;
+                float normMax = *maxIt;
+                normRange = normMax - normMin;
+                if (normRange > 0.0f) {
+                    for (auto& v : chunk) {
+                        v = (v - normMin) / normRange;
+                    }
+                }
+            }
+
             // Compress
             auto compStart = std::chrono::steady_clock::now();
             CompressedData compressedChunk = compressor.compress(chunk);
@@ -76,6 +91,13 @@ BenchmarkResult runChunkedBenchmark(
             auto decompEnd = std::chrono::steady_clock::now();
 
             iterDecompressionTime += decompEnd - decompStart;
+
+            // Denormalize back to original range
+            if (normalize && normRange > 0.0f) {
+                for (auto& v : decompressedChunk) {
+                    v = v * normRange + normMin;
+                }
+            }
 
             if (lastIter) {
                 allDecompressedData.insert(allDecompressedData.end(),

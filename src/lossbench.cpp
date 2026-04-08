@@ -120,7 +120,7 @@ int main(int argc, char* argv[]) {
                 compressor->configure(test.compressionOptions);
 
                 BenchmarkResult metrics = runChunkedBenchmark(
-                    *compressor, data, test.chunkSize, test.iterations);
+                    *compressor, data, test.chunkSize, test.iterations, test.normalize);
 
                 std::map<std::string, std::string> compressorConfig = compressor->getConfig();
                 nlohmann::json resultJSON = makeBenchmarkJSON(

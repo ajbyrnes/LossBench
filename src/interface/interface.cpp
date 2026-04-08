@@ -109,6 +109,9 @@ static Args parseConfigFile(const std::string& filepath) {
         if (t.contains("decompFile")) {
             test.decompFile = t["decompFile"].get<std::string>();
         }
+        if (t.contains("normalize")) {
+            test.normalize = t["normalize"].get<bool>();
+        }
 
         args.tests.push_back(std::move(test));
     }
@@ -151,6 +154,8 @@ Args parseArgs(int argc, char* argv[]) {
             singleTest.decompFile = argv[++i];
         } else if (arg == "--iterations" && i + 1 < argc) {
             singleTest.iterations = std::stoul(argv[++i]);
+        } else if (arg == "--normalize") {
+            singleTest.normalize = true;
         } else if (arg == "--configFile" && i + 1 < argc) {
             configFilePath = argv[++i];
         } else {
@@ -198,7 +203,8 @@ void printUsage() {
         " --compressor <name[:opt=val,...]>"
         " [--resultsFile <file>]"
         " [--decompFile <file>]"
-        " [--iterations <n>]\n"
+        " [--iterations <n>]"
+        " [--normalize]\n"
         "\n"
         "Usage (multiple tests from config file):\n"
         "  lossbench"
@@ -234,6 +240,9 @@ void printArgs(const Args& args) {
         }
         std::cout << " chunkSize=" << test.chunkSize;
         std::cout << " iterations=" << test.iterations;
+        if (test.normalize) {
+            std::cout << " normalize=true";
+        }
         if (!test.decompFile.empty()) {
             std::cout << " decompFile=" << test.decompFile;
         }
@@ -291,6 +300,7 @@ nlohmann::json makeBenchmarkJSON(
         {"iterations", test.iterations},
         {"compressor", test.compressor},
         {"compressor_config", compressorConfig},
+        {"normalize", test.normalize},
         {"results_file", args.resultsFile},
         {"decomp_file", test.decompFile}
     };
