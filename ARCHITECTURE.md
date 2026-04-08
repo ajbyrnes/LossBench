@@ -83,5 +83,5 @@ src/
 - `zstd-trunc` - Bit truncation + zstd, options: `compressionLevel` (1-22), `truncBits` (0-23)
 - `sz3` - Error-bounded lossy (SZ3 framework), configurable error bounds and modes
 - `zfp` - Lossy floating-point compression, options: `mode` (rate/precision/accuracy/reversible), `tolerance`
-- `sperr` - Wavelet-based lossy compression, options: `mode` (bpp/psnr/pwe), `quality`
+- `sperr` - Wavelet-based lossy compression, options: `mode` (bitrate/psnr/pwe), `quality`
 - `szp` - Error-bounded lossy compression with OpenMP, options: `absErrBound` (default 1e-6), `blockSize` (default 128)

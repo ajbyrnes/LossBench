@@ -86,7 +86,7 @@ void SPERRCompressor::configure(const std::map<std::string, std::string>& option
 
     for (const auto& [key, value] : options) {
         if (key == "mode") {
-            if (value == "bpp" || value == "BPP") {
+            if (value == "bitrate" || value == "bpp" || value == "BPP") {
                 _mode = 1;
             } else if (value == "psnr" || value == "PSNR") {
                 _mode = 2;
@@ -97,7 +97,7 @@ void SPERRCompressor::configure(const std::map<std::string, std::string>& option
                 int m = std::stoi(value);
                 if (m < 1 || m > 3) {
                     throw std::invalid_argument("Invalid SPERR mode: " + value +
-                        ". Must be bpp/1, psnr/2, or pwe/3.");
+                        ". Must be bitrate/1, psnr/2, or pwe/3.");
                 }
                 _mode = m;
             }
@@ -106,11 +106,11 @@ void SPERRCompressor::configure(const std::map<std::string, std::string>& option
             if (_quality <= 0) {
                 throw std::invalid_argument("Invalid quality value: " + value + ". Must be positive.");
             }
-        } else if (key == "bpp") {
+        } else if (key == "bitrate") {
             _mode = 1;
             _quality = std::stod(value);
             if (_quality <= 0) {
-                throw std::invalid_argument("Invalid bpp value: " + value + ". Must be positive.");
+                throw std::invalid_argument("Invalid bitrate value: " + value + ". Must be positive.");
             }
         } else if (key == "psnr") {
             _mode = 2;
@@ -137,7 +137,7 @@ std::map<std::string, std::string> SPERRCompressor::getConfig() const {
 
     std::string modeName;
     switch (_mode) {
-        case 1: modeName = "bpp"; break;
+        case 1: modeName = "bitrate"; break;
         case 2: modeName = "psnr"; break;
         case 3: modeName = "pwe"; break;
         default: modeName = std::to_string(_mode);
@@ -167,10 +167,10 @@ std::string SPERRCompressor::version() const {
 std::string SPERRCompressor::usage() const {
     return "SPERR compressor options:\n"
            "  - mode:      string, Compression mode (default: pwe)\n"
-           "               Modes: bpp (bits per pixel), psnr, pwe (point-wise error)\n"
+           "               Modes: bitrate (bits per pixel), psnr, pwe (point-wise error)\n"
            "  - quality:   double, Quality parameter (meaning depends on mode)\n"
-           "               bpp: bits per value, psnr: target PSNR in dB, pwe: max error\n"
-           "  - bpp:       double, Shorthand for mode=bpp,quality=<value>\n"
+           "               bitrate: bits per value, psnr: target PSNR in dB, pwe: max error\n"
+           "  - bitrate:   double, Shorthand for mode=bitrate,quality=<value>\n"
            "  - psnr:      double, Shorthand for mode=psnr,quality=<value>\n"
            "  - pwe:       double, Shorthand for mode=pwe,quality=<value>\n"
            "  - tolerance: double, Alias for pwe\n"
@@ -179,6 +179,6 @@ std::string SPERRCompressor::usage() const {
            "Examples:\n"
            "  sperr:pwe=0.001\n"
            "  sperr:mode=pwe,quality=0.001\n"
-           "  sperr:bpp=4.0\n"
+           "  sperr:bitrate=4.0\n"
            "  sperr:psnr=50";
 }

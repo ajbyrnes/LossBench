@@ -18,7 +18,7 @@ public:
     std::string usage() const override;
 
 private:
-    // Compression mode: 1=BPP, 2=PSNR, 3=PWE
+    // Compression mode: 1=bitrate, 2=PSNR, 3=PWE
     int _mode = 3;  // default: point-wise error (PWE)
 
     // Quality parameter (meaning depends on mode)
