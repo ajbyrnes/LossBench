@@ -22,6 +22,9 @@
 #ifdef HAS_MGARD
 #include "MGARDCompressor.hpp"
 #endif
+#ifdef HAS_ZFPX
+#include "ZFPXCompressor.hpp"
+#endif
 #include "factory.hpp"
 
 using CompressorFactory = std::unique_ptr<Compressor>(*)();
@@ -43,6 +46,9 @@ static const std::unordered_map<std::string, CompressorFactory> factories = {
 #endif
 #ifdef HAS_MGARD
     {"mgard", +[]() -> std::unique_ptr<Compressor> { return std::make_unique<MGARDCompressor>(); }},
+#endif
+#ifdef HAS_ZFPX
+    {"zfpx", +[]() -> std::unique_ptr<Compressor> { return std::make_unique<ZFPXCompressor>(); }},
 #endif
 };
 

@@ -68,6 +68,10 @@ else()
     set(HAS_SPERR FALSE)
 endif()
 
+# ZFP-X is optional (ZFP fork — found manually to avoid target conflict with ZFP)
+find_library(ZFPX_LIBRARY NAMES zfp HINTS $ENV{HOME}/ZFP-X/build/lib NO_DEFAULT_PATH)
+find_path(ZFPX_INCLUDE_DIR NAMES zfp.h HINTS $ENV{HOME}/ZFP-X/include NO_DEFAULT_PATH)
+
 # MGARD is optional
 find_package(mgard QUIET HINTS $ENV{HOME}/local/MGARD/build)
 
@@ -80,6 +84,21 @@ if(SZp_FOUND)
 else()
     message(STATUS "SZp not found - SZp compressor disabled")
     set(HAS_SZP FALSE)
+endif()
+
+# Add ZFP-X if available
+if(ZFPX_LIBRARY AND ZFPX_INCLUDE_DIR)
+    message(STATUS "ZFP-X found - enabling ZFP-X compressor")
+    message(STATUS "  Library: ${ZFPX_LIBRARY}")
+    message(STATUS "  Include: ${ZFPX_INCLUDE_DIR}")
+    list(APPEND COMPRESSOR_SOURCES ZFPXCompressor.cpp ZFPXCompressor.hpp)
+    list(APPEND COMPRESSOR_LIBS ${ZFPX_LIBRARY})
+    set(ZFPX_FOUND TRUE)
+    set(HAS_ZFPX TRUE)
+else()
+    message(STATUS "ZFP-X not found - ZFP-X compressor disabled")
+    set(ZFPX_FOUND FALSE)
+    set(HAS_ZFPX FALSE)
 endif()
 
 # Add MGARD if available
@@ -105,6 +124,11 @@ if(SPERR_FOUND)
     target_include_directories(compressors PUBLIC ${SPERR_INCLUDE_DIR})
 endif()
 
+# Add ZFP-X include directory if found
+if(ZFPX_FOUND)
+    target_include_directories(compressors PUBLIC ${ZFPX_INCLUDE_DIR})
+endif()
+
 target_link_libraries(compressors PUBLIC ${COMPRESSOR_LIBS})
 
 # Export compile definitions for conditional compilation
@@ -123,6 +147,9 @@ endif()
 if(HAS_MGARD)
     target_compile_definitions(compressors PUBLIC HAS_MGARD)
 endif()
+if(HAS_ZFPX)
+    target_compile_definitions(compressors PUBLIC HAS_ZFPX)
+endif()
 
 # Propagate to parent scope for tests
 set(HAS_SZ3 ${HAS_SZ3} PARENT_SCOPE)
@@ -130,3 +157,4 @@ set(HAS_ZFP ${HAS_ZFP} PARENT_SCOPE)
 set(HAS_SPERR ${HAS_SPERR} PARENT_SCOPE)
 set(HAS_SZP ${HAS_SZP} PARENT_SCOPE)
 set(HAS_MGARD ${HAS_MGARD} PARENT_SCOPE)
+set(HAS_ZFPX ${HAS_ZFPX} PARENT_SCOPE)
