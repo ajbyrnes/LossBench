@@ -68,6 +68,9 @@ else()
     set(HAS_SPERR FALSE)
 endif()
 
+# MGARD is optional
+find_package(mgard QUIET HINTS $ENV{HOME}/local/MGARD/build)
+
 # Add SZp if available
 if(SZp_FOUND)
     message(STATUS "SZp found - enabling SZp compressor")
@@ -77,6 +80,17 @@ if(SZp_FOUND)
 else()
     message(STATUS "SZp not found - SZp compressor disabled")
     set(HAS_SZP FALSE)
+endif()
+
+# Add MGARD if available
+if(mgard_FOUND)
+    message(STATUS "MGARD found - enabling MGARD compressor")
+    list(APPEND COMPRESSOR_SOURCES MGARDCompressor.cpp MGARDCompressor.hpp)
+    list(APPEND COMPRESSOR_LIBS mgard::mgard)
+    set(HAS_MGARD TRUE)
+else()
+    message(STATUS "MGARD not found - MGARD compressor disabled")
+    set(HAS_MGARD FALSE)
 endif()
 
 add_library(compressors STATIC ${COMPRESSOR_SOURCES})
@@ -106,9 +120,13 @@ endif()
 if(HAS_SZP)
     target_compile_definitions(compressors PUBLIC HAS_SZP)
 endif()
+if(HAS_MGARD)
+    target_compile_definitions(compressors PUBLIC HAS_MGARD)
+endif()
 
 # Propagate to parent scope for tests
 set(HAS_SZ3 ${HAS_SZ3} PARENT_SCOPE)
 set(HAS_ZFP ${HAS_ZFP} PARENT_SCOPE)
 set(HAS_SPERR ${HAS_SPERR} PARENT_SCOPE)
 set(HAS_SZP ${HAS_SZP} PARENT_SCOPE)
+set(HAS_MGARD ${HAS_MGARD} PARENT_SCOPE)
