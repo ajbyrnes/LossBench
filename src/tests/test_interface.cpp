@@ -46,8 +46,9 @@ TEST(ParseArgs, AllRequired) {
     EXPECT_EQ(parsed.treename, "Events");
     EXPECT_EQ(parsed.branches.size(), 1);
     EXPECT_EQ(parsed.branches[0], "px");
-    EXPECT_EQ(parsed.chunkSize, 1024);
-    EXPECT_EQ(parsed.compressor, "zlib");
+    ASSERT_EQ(parsed.tests.size(), 1);
+    EXPECT_EQ(parsed.tests[0].chunkSize, 1024);
+    EXPECT_EQ(parsed.tests[0].compressor, "zlib");
     EXPECT_EQ(parsed.resultsFile, "results.jsonl");
 }
 
@@ -63,9 +64,10 @@ TEST(ParseArgs, CompressorWithOptions) {
 
     Args parsed = parseArgs(args.argc(), args.argv());
 
-    EXPECT_EQ(parsed.compressor, "zlib");
-    EXPECT_EQ(parsed.compressionOptions.size(), 1);
-    EXPECT_EQ(parsed.compressionOptions.at("compressionLevel"), "9");
+    ASSERT_EQ(parsed.tests.size(), 1);
+    EXPECT_EQ(parsed.tests[0].compressor, "zlib");
+    EXPECT_EQ(parsed.tests[0].compressionOptions.size(), 1);
+    EXPECT_EQ(parsed.tests[0].compressionOptions.at("compressionLevel"), "9");
 }
 
 // Test parsing compressor with multiple options
@@ -80,10 +82,11 @@ TEST(ParseArgs, CompressorMultipleOptions) {
 
     Args parsed = parseArgs(args.argc(), args.argv());
 
-    EXPECT_EQ(parsed.compressor, "sz3");
-    EXPECT_EQ(parsed.compressionOptions.size(), 2);
-    EXPECT_EQ(parsed.compressionOptions.at("absErrorBound"), "0.01");
-    EXPECT_EQ(parsed.compressionOptions.at("errorBoundMode"), "1");
+    ASSERT_EQ(parsed.tests.size(), 1);
+    EXPECT_EQ(parsed.tests[0].compressor, "sz3");
+    EXPECT_EQ(parsed.tests[0].compressionOptions.size(), 2);
+    EXPECT_EQ(parsed.tests[0].compressionOptions.at("absErrorBound"), "0.01");
+    EXPECT_EQ(parsed.tests[0].compressionOptions.at("errorBoundMode"), "1");
 }
 
 // Test parsing multiple branches
@@ -175,7 +178,7 @@ TEST(MakeBenchmarkJSON, HasExpectedFields) {
     EXPECT_EQ(j["config"]["chunk_size"], 1024);
 
     // Check results fields
-    EXPECT_EQ(j["results"]["compression_ratio"], 2.5f);
+    EXPECT_FLOAT_EQ(j["results"]["compression_ratio"].get<float>(), 2.5f);
     EXPECT_EQ(j["results"]["original_size_bytes"], 400);  // 100 floats * 4 bytes
     EXPECT_EQ(j["results"]["compressed_size_bytes"], 160);
 }

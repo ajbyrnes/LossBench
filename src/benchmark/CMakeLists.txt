@@ -1,5 +1,5 @@
 # Benchmark library
-add_library(benchmark STATIC
+add_library(benchmark OBJECT
     benchmark.hpp
     benchmark.cpp
     throughput_metrics.cpp
