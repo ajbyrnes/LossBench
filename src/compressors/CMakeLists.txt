@@ -101,6 +101,7 @@ else()
     set(HAS_ZFPX FALSE)
 endif()
 
+
 # Add MGARD if available
 if(mgard_FOUND)
     message(STATUS "MGARD found - enabling MGARD compressor")
@@ -110,6 +111,32 @@ if(mgard_FOUND)
 else()
     message(STATUS "MGARD not found - MGARD compressor disabled")
     set(HAS_MGARD FALSE)
+endif()
+
+# TuckerMPI (serial) is optional
+find_library(TUCKER_LIBRARY NAMES serial_tucker HINTS $ENV{HOME}/TuckerMPI/build/serial)
+find_path(TUCKER_INCLUDE_DIR NAMES Tucker.hpp HINTS $ENV{HOME}/TuckerMPI/src/serial)
+
+if(TUCKER_LIBRARY AND TUCKER_INCLUDE_DIR)
+    find_package(BLAS QUIET)
+    find_package(LAPACK QUIET)
+    if(BLAS_FOUND AND LAPACK_FOUND)
+        message(STATUS "TuckerMPI found - enabling Tucker compressor")
+        message(STATUS "  Library: ${TUCKER_LIBRARY}")
+        message(STATUS "  Include: ${TUCKER_INCLUDE_DIR}")
+        list(APPEND COMPRESSOR_SOURCES TuckerCompressor.cpp TuckerCompressor.hpp)
+        list(APPEND COMPRESSOR_LIBS ${TUCKER_LIBRARY} ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
+        set(TUCKER_FOUND TRUE)
+        set(HAS_TUCKER TRUE)
+    else()
+        message(STATUS "TuckerMPI found but missing BLAS/LAPACK - Tucker compressor disabled")
+        set(TUCKER_FOUND FALSE)
+        set(HAS_TUCKER FALSE)
+    endif()
+else()
+    message(STATUS "TuckerMPI not found - Tucker compressor disabled")
+    set(TUCKER_FOUND FALSE)
+    set(HAS_TUCKER FALSE)
 endif()
 
 add_library(compressors STATIC ${COMPRESSOR_SOURCES})
@@ -127,6 +154,11 @@ endif()
 # Add ZFP-X include directory if found
 if(ZFPX_FOUND)
     target_include_directories(compressors PUBLIC ${ZFPX_INCLUDE_DIR})
+endif()
+
+# Add Tucker include directory if found
+if(TUCKER_FOUND)
+    target_include_directories(compressors PUBLIC ${TUCKER_INCLUDE_DIR})
 endif()
 
 target_link_libraries(compressors PUBLIC ${COMPRESSOR_LIBS})
@@ -150,6 +182,9 @@ endif()
 if(HAS_ZFPX)
     target_compile_definitions(compressors PUBLIC HAS_ZFPX)
 endif()
+if(HAS_TUCKER)
+    target_compile_definitions(compressors PUBLIC HAS_TUCKER)
+endif()
 
 # Propagate to parent scope for tests
 set(HAS_SZ3 ${HAS_SZ3} PARENT_SCOPE)
@@ -158,3 +193,4 @@ set(HAS_SPERR ${HAS_SPERR} PARENT_SCOPE)
 set(HAS_SZP ${HAS_SZP} PARENT_SCOPE)
 set(HAS_MGARD ${HAS_MGARD} PARENT_SCOPE)
 set(HAS_ZFPX ${HAS_ZFPX} PARENT_SCOPE)
+set(HAS_TUCKER ${HAS_TUCKER} PARENT_SCOPE)
