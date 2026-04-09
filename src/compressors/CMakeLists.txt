@@ -140,8 +140,10 @@ else()
 endif()
 
 # ISABELA is optional (no CMake config, find manually)
-find_library(ISABELA_LIBRARY NAMES isabela HINTS $ENV{HOME}/ISABELA-compress-0.2.1/lib)
-find_path(ISABELA_INCLUDE_DIR NAMES isabela.h HINTS $ENV{HOME}/ISABELA-compress-0.2.1/include)
+file(GLOB _ISABELA_DIRS "$ENV{HOME}/ISABELA-*/lib")
+file(GLOB _ISABELA_INC_DIRS "$ENV{HOME}/ISABELA-*/include")
+find_library(ISABELA_LIBRARY NAMES isabela HINTS ${_ISABELA_DIRS})
+find_path(ISABELA_INCLUDE_DIR NAMES isabela.h HINTS ${_ISABELA_INC_DIRS})
 
 if(ISABELA_LIBRARY AND ISABELA_INCLUDE_DIR)
     # ISABELA depends on GSL and zlib
