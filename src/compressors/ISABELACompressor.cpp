@@ -26,8 +26,9 @@ static void readHeader(const uint8_t* buf, uint32_t& ws, uint32_t& nc, float& er
 CompressedData ISABELACompressor::compress(const std::vector<float>& data) {
     size_t inputBytes = data.size() * sizeof(float);
 
-    // Allocate output buffer (same size as input — ISABELA should compress)
-    std::vector<char> outBuf(inputBytes);
+    // ISABELA stores per-window sort indices (same size as data), coefficients,
+    // and compressed error residuals. Use 8x as ISABELA's own example does.
+    std::vector<char> outBuf(inputBytes * 8);
 
     isabela_config config{};
     config.window_size = _windowSize;
@@ -82,8 +83,10 @@ std::vector<float> ISABELACompressor::decompress(const CompressedData& compresse
     const uint8_t* payload = compressedData.data.data() + kHeaderSize;
     size_t payloadSize = compressedData.data.size() - kHeaderSize;
 
-    size_t outputBytes = compressedData.numFloats * sizeof(float);
-    std::vector<float> output(compressedData.numFloats);
+    // ISABELA's example app allocates 8x for decompression output.
+    // Allocate extra padding to prevent heap corruption from internal writes.
+    size_t outputFloats = compressedData.numFloats;
+    std::vector<float> output(outputFloats * 2);
 
     isabela_config config{};
     config.window_size = ws;
@@ -110,6 +113,7 @@ std::vector<float> ISABELACompressor::decompress(const CompressedData& compresse
 
     isabelaInflateEnd(&strm);
 
+    output.resize(outputFloats);
     return output;
 }
 
