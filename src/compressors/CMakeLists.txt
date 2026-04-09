@@ -140,8 +140,8 @@ else()
 endif()
 
 # ISABELA is optional (no CMake config, find manually)
-file(GLOB _ISABELA_DIRS "$ENV{HOME}/ISABELA-*/lib")
-file(GLOB _ISABELA_INC_DIRS "$ENV{HOME}/ISABELA-*/include")
+file(GLOB _ISABELA_DIRS "$ENV{HOME}/ISABELA*/lib")
+file(GLOB _ISABELA_INC_DIRS "$ENV{HOME}/ISABELA*/include")
 find_library(ISABELA_LIBRARY NAMES isabela HINTS ${_ISABELA_DIRS})
 find_path(ISABELA_INCLUDE_DIR NAMES isabela.h HINTS ${_ISABELA_INC_DIRS})
 
