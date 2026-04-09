@@ -139,6 +139,34 @@ else()
     set(HAS_TUCKER FALSE)
 endif()
 
+# ISABELA is optional (no CMake config, find manually)
+find_library(ISABELA_LIBRARY NAMES isabela HINTS $ENV{HOME}/ISABELA-compress-0.2.1/lib)
+find_path(ISABELA_INCLUDE_DIR NAMES isabela.h HINTS $ENV{HOME}/ISABELA-compress-0.2.1/include)
+
+if(ISABELA_LIBRARY AND ISABELA_INCLUDE_DIR)
+    # ISABELA depends on GSL and zlib
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(GSL QUIET gsl)
+    find_package(ZLIB QUIET)
+    if(GSL_FOUND AND ZLIB_FOUND)
+        message(STATUS "ISABELA found - enabling ISABELA compressor")
+        message(STATUS "  Library: ${ISABELA_LIBRARY}")
+        message(STATUS "  Include: ${ISABELA_INCLUDE_DIR}")
+        list(APPEND COMPRESSOR_SOURCES ISABELACompressor.cpp ISABELACompressor.hpp)
+        list(APPEND COMPRESSOR_LIBS ${ISABELA_LIBRARY} ${GSL_LIBRARIES} ZLIB::ZLIB)
+        set(ISABELA_FOUND TRUE)
+        set(HAS_ISABELA TRUE)
+    else()
+        message(STATUS "ISABELA found but missing GSL/zlib - ISABELA compressor disabled")
+        set(ISABELA_FOUND FALSE)
+        set(HAS_ISABELA FALSE)
+    endif()
+else()
+    message(STATUS "ISABELA not found - ISABELA compressor disabled")
+    set(ISABELA_FOUND FALSE)
+    set(HAS_ISABELA FALSE)
+endif()
+
 add_library(compressors STATIC ${COMPRESSOR_SOURCES})
 
 target_include_directories(
@@ -159,6 +187,11 @@ endif()
 # Add Tucker include directory if found
 if(TUCKER_FOUND)
     target_include_directories(compressors PUBLIC ${TUCKER_INCLUDE_DIR})
+endif()
+
+# Add ISABELA include directory if found
+if(ISABELA_FOUND)
+    target_include_directories(compressors PUBLIC ${ISABELA_INCLUDE_DIR})
 endif()
 
 target_link_libraries(compressors PUBLIC ${COMPRESSOR_LIBS})
@@ -185,6 +218,9 @@ endif()
 if(HAS_TUCKER)
     target_compile_definitions(compressors PUBLIC HAS_TUCKER)
 endif()
+if(HAS_ISABELA)
+    target_compile_definitions(compressors PUBLIC HAS_ISABELA)
+endif()
 
 # Propagate to parent scope for tests
 set(HAS_SZ3 ${HAS_SZ3} PARENT_SCOPE)
@@ -194,3 +230,4 @@ set(HAS_SZP ${HAS_SZP} PARENT_SCOPE)
 set(HAS_MGARD ${HAS_MGARD} PARENT_SCOPE)
 set(HAS_ZFPX ${HAS_ZFPX} PARENT_SCOPE)
 set(HAS_TUCKER ${HAS_TUCKER} PARENT_SCOPE)
+set(HAS_ISABELA ${HAS_ISABELA} PARENT_SCOPE)

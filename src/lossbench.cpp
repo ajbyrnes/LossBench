@@ -116,37 +116,41 @@ int main(int argc, char* argv[]) {
                 }
                 std::cout << "...\n";
 
-                std::unique_ptr<Compressor> compressor = createCompressor(test.compressor);
-                compressor->configure(test.compressionOptions);
+                try {
+                    std::unique_ptr<Compressor> compressor = createCompressor(test.compressor);
+                    compressor->configure(test.compressionOptions);
 
-                BenchmarkResult metrics = runChunkedBenchmark(
-                    *compressor, data, test.chunkSize, test.iterations, test.normalize);
+                    BenchmarkResult metrics = runChunkedBenchmark(
+                        *compressor, data, test.chunkSize, test.iterations, test.normalize);
 
-                std::map<std::string, std::string> compressorConfig = compressor->getConfig();
-                nlohmann::json resultJSON = makeBenchmarkJSON(
-                    args, test, compressorConfig, metrics, branch);
+                    std::map<std::string, std::string> compressorConfig = compressor->getConfig();
+                    nlohmann::json resultJSON = makeBenchmarkJSON(
+                        args, test, compressorConfig, metrics, branch);
 
-                if (!args.resultsFile.empty()) {
-                    appendJSONL(args.resultsFile, resultJSON);
-                    std::cout << "  Appended results to " << args.resultsFile << "\n";
-                }
-
-                if (!test.decompFile.empty()) {
-                    std::vector<std::vector<float>> branchData =
-                        reconstructBranchData(metrics.decompressedData, entrySizes);
-
-                    if (initializedDecompFiles.count(test.decompFile) == 0) {
-                        createTreeWithVectorFloatBranch(
-                            test.decompFile, args.treename, branch, branchData);
-                        initializedDecompFiles.insert(test.decompFile);
-                        std::cout << "  Created " << test.decompFile
-                                  << " with branch '" << branch << "'\n";
-                    } else {
-                        insertVectorFloatBranch(
-                            test.decompFile, args.treename, branch, branchData);
-                        std::cout << "  Added branch '" << branch
-                                  << "' to " << test.decompFile << "\n";
+                    if (!args.resultsFile.empty()) {
+                        appendJSONL(args.resultsFile, resultJSON);
+                        std::cout << "  Appended results to " << args.resultsFile << "\n";
                     }
+
+                    if (!test.decompFile.empty()) {
+                        std::vector<std::vector<float>> branchData =
+                            reconstructBranchData(metrics.decompressedData, entrySizes);
+
+                        if (initializedDecompFiles.count(test.decompFile) == 0) {
+                            createTreeWithVectorFloatBranch(
+                                test.decompFile, args.treename, branch, branchData);
+                            initializedDecompFiles.insert(test.decompFile);
+                            std::cout << "  Created " << test.decompFile
+                                      << " with branch '" << branch << "'\n";
+                        } else {
+                            insertVectorFloatBranch(
+                                test.decompFile, args.treename, branch, branchData);
+                            std::cout << "  Added branch '" << branch
+                                      << "' to " << test.decompFile << "\n";
+                        }
+                    }
+                } catch (const std::exception& e) {
+                    std::cerr << "  Warning: test skipped - " << e.what() << "\n";
                 }
             }
         }

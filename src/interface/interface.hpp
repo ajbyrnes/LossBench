@@ -14,7 +14,7 @@ struct TestConfig {
     std::size_t chunkSize{0};
     std::size_t iterations{1};
     std::string decompFile;
-    bool normalize{true};
+    bool normalize{false};
 };
 
 // Global configuration: data source and list of tests to run.

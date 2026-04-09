@@ -28,6 +28,9 @@
 #ifdef HAS_TUCKER
 #include "TuckerCompressor.hpp"
 #endif
+#ifdef HAS_ISABELA
+#include "ISABELACompressor.hpp"
+#endif
 #include "factory.hpp"
 
 using CompressorFactory = std::unique_ptr<Compressor>(*)();
@@ -55,6 +58,9 @@ static const std::unordered_map<std::string, CompressorFactory> factories = {
 #endif
 #ifdef HAS_TUCKER
     {"tucker", +[]() -> std::unique_ptr<Compressor> { return std::make_unique<TuckerCompressor>(); }},
+#endif
+#ifdef HAS_ISABELA
+    {"isabela", +[]() -> std::unique_ptr<Compressor> { return std::make_unique<ISABELACompressor>(); }},
 #endif
 };
 

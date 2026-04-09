@@ -1,5 +1,5 @@
 #include "MGARDCompressor.hpp"
-#include <compress_x.hpp>
+#include <mgard/compress_x.hpp>
 #include <stdexcept>
 #include <cstdlib>
 
