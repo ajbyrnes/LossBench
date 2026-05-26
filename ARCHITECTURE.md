@@ -1,6 +1,7 @@
-# CLAUDE.md
+# Architecture
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This document gives a tour of the LossBench codebase for new contributors.
+For end-user docs (build, CLI, output format) see [README.md](README.md).
 
 ## Project Overview
 
