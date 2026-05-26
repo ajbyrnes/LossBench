@@ -1,13 +1,25 @@
+/// @file SZ3Compressor.cpp
+/// @brief Implementation of @ref SZ3Compressor — see the header for option docs.
+
 #include "SZ3Compressor.hpp"
 #include <SZ3/api/sz.hpp>
 
+
+void SZ3Compressor::setDimensions(const std::vector<std::size_t>& dims) {
+    _dims = dims;
+}
 
 CompressedData SZ3Compressor::compress(const std::vector<float>& data) {
     // Use a fresh config per call so SZ3 internal mutations don't persist
     SZ3::Config config = _userConfig;
 
-    // Set config dimensions
-    std::vector<size_t> dims = {data.size()};
+    // Set config dimensions (use stored dims if available, else 1D)
+    std::vector<size_t> dims;
+    if (_dims.size() == 2 && _dims[0] > 0 && _dims[1] > 0) {
+        dims = {_dims[1], _dims[0]}; // SZ3 expects {fast, slow} → {rowLen, nRows}
+    } else {
+        dims = {data.size()};
+    }
     config.setDims(dims.begin(), dims.end());
 
     // Compress
@@ -38,8 +50,13 @@ std::vector<float> SZ3Compressor::decompress(const CompressedData& compressedDat
     // Use a fresh config per call so SZ3 internal mutations don't persist
     SZ3::Config config = _userConfig;
 
-    // Set config dimensions
-    std::vector<size_t> dims = {compressedData.numFloats};
+    // Set config dimensions (use stored dims if available, else 1D)
+    std::vector<size_t> dims;
+    if (_dims.size() == 2 && _dims[0] > 0 && _dims[1] > 0) {
+        dims = {_dims[1], _dims[0]}; // SZ3 expects {fast, slow} → {rowLen, nRows}
+    } else {
+        dims = {compressedData.numFloats};
+    }
     config.setDims(dims.begin(), dims.end());
 
     // Allocate output buffer

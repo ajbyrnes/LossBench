@@ -1,3 +1,6 @@
+/// @file benchmark.cpp
+/// @brief Implementation of the chunked benchmark loop and metric registry.
+
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -20,7 +23,8 @@ BenchmarkResult runChunkedBenchmark(
     const std::vector<float>& data,
     std::size_t chunkSizeBytes,
     std::size_t iterations,
-    bool normalize
+    bool normalize,
+    const std::vector<std::size_t>& dimensions
 )
 {
     if (iterations == 0) {
@@ -30,12 +34,25 @@ BenchmarkResult runChunkedBenchmark(
     std::size_t totalFloats = data.size();
     std::size_t totalOriginalBytes = totalFloats * sizeof(float);
 
+    // Determine if data is 2D (dimensions = {nRows, rowLen})
+    const bool is2D = (dimensions.size() == 2 && dimensions[0] > 0 && dimensions[1] > 0);
+    const std::size_t rowLen = is2D ? dimensions[1] : 0;
+
     // Calculate floats per chunk
     std::size_t floatsPerChunk = chunkSizeBytes / sizeof(float);
 
     // If chunkSizeBytes is 0 or >= total data size, process as single chunk
     if (floatsPerChunk == 0 || floatsPerChunk >= totalFloats) {
         floatsPerChunk = totalFloats;
+    }
+
+    // For 2D data, round floatsPerChunk down to a multiple of rowLen
+    // so each chunk contains complete rows
+    if (is2D && floatsPerChunk < totalFloats && rowLen > 0) {
+        floatsPerChunk = (floatsPerChunk / rowLen) * rowLen;
+        if (floatsPerChunk == 0) {
+            floatsPerChunk = rowLen; // at least one row per chunk
+        }
     }
 
     // Accumulators across all iterations for timing
@@ -77,6 +94,14 @@ BenchmarkResult runChunkedBenchmark(
                 }
             }
 
+            // Set dimensions for this chunk
+            if (is2D) {
+                std::size_t chunkRows = chunkFloats / rowLen;
+                compressor.setDimensions({chunkRows, rowLen});
+            } else if (!dimensions.empty()) {
+                compressor.setDimensions({chunkFloats});
+            }
+
             // Compress
             auto compStart = std::chrono::steady_clock::now();
             CompressedData compressedChunk = compressor.compress(chunk);
@@ -84,6 +109,14 @@ BenchmarkResult runChunkedBenchmark(
 
             iterCompressedBytes += compressedChunk.data.size();
             iterCompressionTime += compEnd - compStart;
+
+            // Set dimensions again before decompress (in case compressor state changed)
+            if (is2D) {
+                std::size_t chunkRows = chunkFloats / rowLen;
+                compressor.setDimensions({chunkRows, rowLen});
+            } else if (!dimensions.empty()) {
+                compressor.setDimensions({chunkFloats});
+            }
 
             // Decompress
             auto decompStart = std::chrono::steady_clock::now();

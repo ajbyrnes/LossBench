@@ -1,20 +1,33 @@
+/// @file SPERRCompressor.cpp
+/// @brief Implementation of @ref SPERRCompressor — see the header for option docs.
+
 #include "SPERRCompressor.hpp"
 #include <SPERR_C_API.h>
 #include <SperrConfig.h>
 #include <stdexcept>
 #include <cstdlib>
 
+void SPERRCompressor::setDimensions(const std::vector<std::size_t>& dims) {
+    _dims = dims;
+}
+
 CompressedData SPERRCompressor::compress(const std::vector<float>& data) {
     void* dst = nullptr;
     size_t dst_len = 0;
 
-    // Use 2D API with dimy=1 to treat 1D data as a single row
-    // Include header so decompression knows dimensions
+    // Use actual 2D dimensions if set, otherwise treat as single row
+    size_t dimx = data.size();
+    size_t dimy = 1;
+    if (_dims.size() == 2 && _dims[0] > 0 && _dims[1] > 0) {
+        dimx = _dims[1];  // rowLen
+        dimy = _dims[0];  // nRows
+    }
+
     int ret = C_API::sperr_comp_2d(
         data.data(),        // src
         1,                  // is_float = true
-        data.size(),        // dimx
-        1,                  // dimy = 1 for 1D data
+        dimx,               // dimx
+        dimy,               // dimy
         _mode,              // mode: 1=BPP, 2=PSNR, 3=PWE
         _quality,           // quality
         1,                  // out_inc_header = yes

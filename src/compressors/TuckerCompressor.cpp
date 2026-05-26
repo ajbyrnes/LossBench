@@ -1,3 +1,6 @@
+/// @file TuckerCompressor.cpp
+/// @brief Implementation of @ref TuckerCompressor — see the header for option docs.
+
 #include "TuckerCompressor.hpp"
 #include <Tucker.hpp>
 #include <cmath>

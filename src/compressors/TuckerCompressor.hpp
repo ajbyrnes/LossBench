@@ -1,3 +1,6 @@
+/// @file TuckerCompressor.hpp
+/// @brief Tucker-decomposition-based lossy compressor.
+
 #pragma once
 
 #include <map>
@@ -6,6 +9,10 @@
 
 #include "Compressor.hpp"
 
+/// @brief Lossy compressor based on truncated Tucker tensor decomposition.
+///
+/// **CLI options**
+/// - `epsilon` — relative truncation tolerance. Default 0.1.
 class TuckerCompressor : public Compressor {
 public:
     CompressedData compress(const std::vector<float>& data) override;
@@ -18,5 +25,5 @@ public:
     std::string usage() const override;
 
 private:
-    double _epsilon = 0.1;
+    double _epsilon = 0.1; ///< Relative truncation tolerance.
 };

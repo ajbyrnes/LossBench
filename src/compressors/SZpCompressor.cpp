@@ -1,3 +1,6 @@
+/// @file SZpCompressor.cpp
+/// @brief Implementation of @ref SZpCompressor — see the header for option docs.
+
 #include "SZpCompressor.hpp"
 #include <szp_float.h>
 #include <szpd_float.h>

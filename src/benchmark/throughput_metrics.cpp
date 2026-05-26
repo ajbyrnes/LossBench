@@ -1,3 +1,6 @@
+/// @file throughput_metrics.cpp
+/// @brief Compression ratio and compression/decompression throughput metrics.
+
 #include "benchmark.hpp"
 
 static auto reg = [] {

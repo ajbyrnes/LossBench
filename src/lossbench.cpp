@@ -1,4 +1,20 @@
+/// @file lossbench.cpp
+/// @brief LossBench program entry point.
+///
+/// The driver flow is:
+///   1. Handle info options (`--help`, `--list-compressors`, `--compressor-help`).
+///   2. Parse the CLI into an @ref Args struct (one source file + tree + branches,
+///      plus a list of @ref TestConfig entries to run).
+///   3. For each branch, read its `vector<float>` data once and run every
+///      configured test against it (compressor + options + chunk size + layout).
+///   4. For each (branch, test) pair, append a JSON row to the results JSONL
+///      and optionally write the decompressed data into a parallel ROOT file.
+///
+/// Per-branch iteration in the outer loop keeps at most one branch's data in
+/// memory at a time; the inner loop reuses that data across every test.
+
 #include <algorithm>
+#include <filesystem>
 #include <format>
 #include <iostream>
 #include <memory>
@@ -15,7 +31,8 @@
 #include "factory.hpp"
 #include "benchmark.hpp"
 
-// Reconstruct nested vector<vector<float>> from flat data using entry sizes
+/// Reconstruct the nested `vector<vector<float>>` shape (one inner vector per
+/// TTree entry) from a flat decompressed buffer plus the original entry sizes.
 std::vector<std::vector<float>> reconstructBranchData(
     const std::vector<float>& flatData,
     const std::vector<std::size_t>& entrySizes)
@@ -30,6 +47,46 @@ std::vector<std::vector<float>> reconstructBranchData(
     }
 
     return result;
+}
+
+/// Pack variable-length events into a zero-padded 2-D array (row-major).
+///
+/// Each event becomes a row of length @p maxLen, padded with zeros. Used to
+/// give multi-dimensional backends (ZFP, SZ3, SPERR) a rectangular view of
+/// inherently jagged HEP data.
+std::vector<float> padTo2D(
+    const std::vector<float>& flatData,
+    const std::vector<std::size_t>& entrySizes,
+    std::size_t maxLen)
+{
+    std::vector<float> padded(entrySizes.size() * maxLen, 0.0f);
+    std::size_t srcOffset = 0;
+    for (std::size_t i = 0; i < entrySizes.size(); ++i) {
+        std::copy(flatData.begin() + srcOffset,
+                  flatData.begin() + srcOffset + entrySizes[i],
+                  padded.begin() + i * maxLen);
+        srcOffset += entrySizes[i];
+    }
+    return padded;
+}
+
+/// Inverse of @ref padTo2D: strip the zero-padding from a 2-D buffer back to
+/// the original variable-length per-event layout.
+std::vector<float> unpadFrom2D(
+    const std::vector<float>& paddedData,
+    const std::vector<std::size_t>& entrySizes,
+    std::size_t maxLen)
+{
+    std::vector<float> flat;
+    std::size_t totalFloats = 0;
+    for (auto s : entrySizes) totalFloats += s;
+    flat.reserve(totalFloats);
+
+    for (std::size_t i = 0; i < entrySizes.size(); ++i) {
+        auto rowStart = paddedData.begin() + i * maxLen;
+        flat.insert(flat.end(), rowStart, rowStart + entrySizes[i]);
+    }
+    return flat;
 }
 
 int main(int argc, char* argv[]) {
@@ -82,10 +139,12 @@ int main(int argc, char* argv[]) {
         // Each test should use a distinct decompFile path.
         std::set<std::string> initializedDecompFiles;
 
-        // Determine upfront whether any test writes decompressed output, so we
-        // know to read entry sizes alongside the branch data.
-        const bool anyDecompFile = std::ranges::any_of(
-            args.tests, [](const TestConfig& t) { return !t.decompFile.empty(); });
+        // Determine upfront whether any test needs entry sizes: either for
+        // writing decompressed output or for padded2d layout.
+        const bool needEntrySizes = std::ranges::any_of(
+            args.tests, [](const TestConfig& t) {
+                return !t.decompFile.empty() || t.dataLayout == "padded2d";
+            });
 
         // Outer loop: one branch at a time so only one branch's data is in memory.
         // Future extension: TestConfig could carry a `branches` field specifying
@@ -97,7 +156,7 @@ int main(int argc, char* argv[]) {
                 args.dataFile, args.treename, branch);
 
             std::vector<std::size_t> entrySizes;
-            if (anyDecompFile) {
+            if (needEntrySizes) {
                 entrySizes = readBranchEntrySizes(args.dataFile, args.treename, branch);
             }
 
@@ -120,8 +179,33 @@ int main(int argc, char* argv[]) {
                     std::unique_ptr<Compressor> compressor = createCompressor(test.compressor);
                     compressor->configure(test.compressionOptions);
 
+                    // Prepare data and dimensions based on layout
+                    const std::vector<float>* benchData = &data;
+                    std::vector<float> paddedData;
+                    std::vector<std::size_t> dimensions;
+
+                    if (test.dataLayout == "padded2d") {
+                        std::size_t maxLen = *std::max_element(entrySizes.begin(), entrySizes.end());
+                        std::size_t nRows = entrySizes.size();
+                        paddedData = padTo2D(data, entrySizes, maxLen);
+                        benchData = &paddedData;
+                        dimensions = {nRows, maxLen};
+                        std::cout << "    (padded2d: " << nRows << " x " << maxLen
+                                  << ", padding overhead: "
+                                  << std::format("{:.1f}%", 100.0 * (paddedData.size() - data.size()) / data.size())
+                                  << ")\n";
+                    }
+
                     BenchmarkResult metrics = runChunkedBenchmark(
-                        *compressor, data, test.chunkSize, test.iterations, test.normalize);
+                        *compressor, *benchData, test.chunkSize, test.iterations,
+                        test.normalize, dimensions);
+
+                    // If padded2d, unpad decompressed data back to original structure
+                    if (test.dataLayout == "padded2d") {
+                        std::size_t maxLen = dimensions[1];
+                        metrics.decompressedData = unpadFrom2D(
+                            metrics.decompressedData, entrySizes, maxLen);
+                    }
 
                     std::map<std::string, std::string> compressorConfig = compressor->getConfig();
                     nlohmann::json resultJSON = makeBenchmarkJSON(
@@ -136,7 +220,8 @@ int main(int argc, char* argv[]) {
                         std::vector<std::vector<float>> branchData =
                             reconstructBranchData(metrics.decompressedData, entrySizes);
 
-                        if (initializedDecompFiles.count(test.decompFile) == 0) {
+                        if (initializedDecompFiles.count(test.decompFile) == 0
+                            && !std::filesystem::exists(test.decompFile)) {
                             createTreeWithVectorFloatBranch(
                                 test.decompFile, args.treename, branch, branchData);
                             initializedDecompFiles.insert(test.decompFile);
@@ -145,6 +230,7 @@ int main(int argc, char* argv[]) {
                         } else {
                             insertVectorFloatBranch(
                                 test.decompFile, args.treename, branch, branchData);
+                            initializedDecompFiles.insert(test.decompFile);
                             std::cout << "  Added branch '" << branch
                                       << "' to " << test.decompFile << "\n";
                         }

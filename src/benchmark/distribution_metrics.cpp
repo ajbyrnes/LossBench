@@ -1,3 +1,6 @@
+/// @file distribution_metrics.cpp
+/// @brief Distribution-shape metrics (e.g. quantile / KS-style) registered at startup.
+
 #include <algorithm>
 #include <cmath>
 #include <vector>

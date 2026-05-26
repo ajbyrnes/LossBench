@@ -1,3 +1,6 @@
+/// @file error_metrics.cpp
+/// @brief Point-wise error metrics (max/mean abs/rel, MSE, PSNR) registered at startup.
+
 #include <algorithm>
 #include <cmath>
 #include <limits>

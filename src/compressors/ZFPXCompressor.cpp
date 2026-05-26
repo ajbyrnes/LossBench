@@ -1,3 +1,6 @@
+/// @file ZFPXCompressor.cpp
+/// @brief Implementation of @ref ZFPXCompressor — see the header for option docs.
+
 #include "ZFPXCompressor.hpp"
 #include <zfp.h>
 #include <stdexcept>

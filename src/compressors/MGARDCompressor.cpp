@@ -1,3 +1,6 @@
+/// @file MGARDCompressor.cpp
+/// @brief Implementation of @ref MGARDCompressor — see the header for option docs.
+
 #include "MGARDCompressor.hpp"
 #include <mgard/compress_x.hpp>
 #include <stdexcept>

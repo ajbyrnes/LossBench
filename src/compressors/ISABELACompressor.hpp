@@ -1,3 +1,6 @@
+/// @file ISABELACompressor.hpp
+/// @brief Wrapper around the ISABELA windowed B-spline / wavelet compressor.
+
 #pragma once
 
 #include <map>
@@ -6,6 +9,17 @@
 
 #include "Compressor.hpp"
 
+/// @brief Lossy compressor backed by ISABELA.
+///
+/// ISABELA processes the input in fixed-size windows, sorts each window,
+/// fits either B-splines or wavelets to the sorted values, and stores the
+/// coefficients plus an optional bounded residual.
+///
+/// **CLI options**
+/// - `windowSize`    — elements per window. Default 1024.
+/// - `ncoefficients` — coefficients kept per window. Default 30.
+/// - `errorRate`     — max relative residual (0 disables residual coding). Default 0.01.
+/// - `transform`     — 0 = B-splines, 1 = wavelets. Default 0.
 class ISABELACompressor : public Compressor {
 public:
     CompressedData compress(const std::vector<float>& data) override;
@@ -18,15 +32,8 @@ public:
     std::string usage() const override;
 
 private:
-    // Number of elements per window (default 1024)
-    uint32_t _windowSize = 1024;
-
-    // Number of B-spline/wavelet coefficients per window (default 30)
-    uint32_t _ncoefficients = 30;
-
-    // Max relative error rate (0 = no error encoding, default 1% = 0.01)
-    float _errorRate = 0.01f;
-
-    // Transform type: 0 = BSplines, 1 = Wavelets
-    int _transform = 0;
+    std::uint32_t _windowSize = 1024;    ///< Elements per processing window.
+    std::uint32_t _ncoefficients = 30;   ///< B-spline / wavelet coefficients kept per window.
+    float _errorRate = 0.01f;            ///< Max relative residual; 0 disables residual encoding.
+    int _transform = 0;                  ///< 0 = B-splines, 1 = wavelets.
 };

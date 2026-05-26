@@ -1,14 +1,34 @@
+/// @file ZFPCompressor.cpp
+/// @brief Implementation of @ref ZFPCompressor — see the header for option docs.
+
 #include "ZFPCompressor.hpp"
 #include <zfp.h>
 #include <stdexcept>
 
+void ZFPCompressor::setDimensions(const std::vector<std::size_t>& dims) {
+    _dims = dims;
+}
+
 CompressedData ZFPCompressor::compress(const std::vector<float>& data) {
-    // Create input field (1D array of floats)
-    zfp_field* field = zfp_field_1d(
-        const_cast<float*>(data.data()),
-        zfp_type_float,
-        data.size()
-    );
+    // Create input field based on dimensionality
+    zfp_field* field = nullptr;
+    uint dims = 1;
+    if (_dims.size() == 2 && _dims[0] > 0 && _dims[1] > 0) {
+        // 2D: dims = {nRows, rowLen} → ZFP wants (nx, ny)
+        field = zfp_field_2d(
+            const_cast<float*>(data.data()),
+            zfp_type_float,
+            _dims[1],  // nx = rowLen
+            _dims[0]   // ny = nRows
+        );
+        dims = 2;
+    } else {
+        field = zfp_field_1d(
+            const_cast<float*>(data.data()),
+            zfp_type_float,
+            data.size()
+        );
+    }
 
     if (!field) {
         throw std::runtime_error("ZFP: failed to create field");
@@ -23,7 +43,7 @@ CompressedData ZFPCompressor::compress(const std::vector<float>& data) {
 
     // Set compression mode
     if (_mode == "rate") {
-        zfp_stream_set_rate(zfp, _rate, zfp_type_float, 1, zfp_false);
+        zfp_stream_set_rate(zfp, _rate, zfp_type_float, dims, zfp_false);
     } else if (_mode == "precision") {
         zfp_stream_set_precision(zfp, _precision);
     } else if (_mode == "accuracy") {
@@ -77,12 +97,24 @@ std::vector<float> ZFPCompressor::decompress(const CompressedData& compressedDat
     // Allocate output buffer
     std::vector<float> output(compressedData.numFloats);
 
-    // Create output field
-    zfp_field* field = zfp_field_1d(
-        output.data(),
-        zfp_type_float,
-        compressedData.numFloats
-    );
+    // Create output field based on dimensionality
+    zfp_field* field = nullptr;
+    uint dims = 1;
+    if (_dims.size() == 2 && _dims[0] > 0 && _dims[1] > 0) {
+        field = zfp_field_2d(
+            output.data(),
+            zfp_type_float,
+            _dims[1],  // nx = rowLen
+            _dims[0]   // ny = nRows
+        );
+        dims = 2;
+    } else {
+        field = zfp_field_1d(
+            output.data(),
+            zfp_type_float,
+            compressedData.numFloats
+        );
+    }
 
     if (!field) {
         throw std::runtime_error("ZFP: failed to create field for decompression");
@@ -97,7 +129,7 @@ std::vector<float> ZFPCompressor::decompress(const CompressedData& compressedDat
 
     // Set compression mode (must match compression settings)
     if (_mode == "rate") {
-        zfp_stream_set_rate(zfp, _rate, zfp_type_float, 1, zfp_false);
+        zfp_stream_set_rate(zfp, _rate, zfp_type_float, dims, zfp_false);
     } else if (_mode == "precision") {
         zfp_stream_set_precision(zfp, _precision);
     } else if (_mode == "accuracy") {

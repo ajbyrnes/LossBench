@@ -1,3 +1,6 @@
+/// @file interface.cpp
+/// @brief CLI parsing, usage printing, and JSONL serialization.
+
 #include <chrono>
 #include <format>
 #include <fstream>
@@ -112,6 +115,13 @@ static Args parseConfigFile(const std::string& filepath) {
         if (t.contains("normalize")) {
             test.normalize = t["normalize"].get<bool>();
         }
+        if (t.contains("dataLayout")) {
+            test.dataLayout = t["dataLayout"].get<std::string>();
+            if (test.dataLayout != "flat" && test.dataLayout != "padded2d") {
+                throw std::runtime_error("Invalid dataLayout: " + test.dataLayout +
+                    ". Must be 'flat' or 'padded2d'.");
+            }
+        }
 
         args.tests.push_back(std::move(test));
     }
@@ -156,6 +166,13 @@ Args parseArgs(int argc, char* argv[]) {
             singleTest.iterations = std::stoul(argv[++i]);
         } else if (arg == "--normalize") {
             singleTest.normalize = true;
+        } else if (arg == "--dataLayout" && i + 1 < argc) {
+            singleTest.dataLayout = argv[++i];
+            if (singleTest.dataLayout != "flat" && singleTest.dataLayout != "padded2d") {
+                throw std::runtime_error("Invalid dataLayout: " + singleTest.dataLayout +
+                    ". Must be 'flat' or 'padded2d'.");
+            }
+            hasSingleTest = true;
         } else if (arg == "--configFile" && i + 1 < argc) {
             configFilePath = argv[++i];
         } else {
@@ -204,7 +221,8 @@ void printUsage() {
         " [--resultsFile <file>]"
         " [--decompFile <file>]"
         " [--iterations <n>]"
-        " [--normalize]\n"
+        " [--normalize]"
+        " [--dataLayout <flat|padded2d>]\n"
         "\n"
         "Usage (multiple tests from config file):\n"
         "  lossbench"
@@ -242,6 +260,9 @@ void printArgs(const Args& args) {
         std::cout << " iterations=" << test.iterations;
         if (test.normalize) {
             std::cout << " normalize=true";
+        }
+        if (test.dataLayout != "flat") {
+            std::cout << " dataLayout=" << test.dataLayout;
         }
         if (!test.decompFile.empty()) {
             std::cout << " decompFile=" << test.decompFile;
@@ -301,6 +322,7 @@ nlohmann::json makeBenchmarkJSON(
         {"compressor", test.compressor},
         {"compressor_config", compressorConfig},
         {"normalize", test.normalize},
+        {"data_layout", test.dataLayout},
         {"results_file", args.resultsFile},
         {"decomp_file", test.decompFile}
     };

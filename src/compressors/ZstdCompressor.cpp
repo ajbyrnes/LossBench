@@ -1,3 +1,6 @@
+/// @file ZstdCompressor.cpp
+/// @brief Implementation of @ref ZstdCompressor — see the header for option docs.
+
 #include <format>
 #include <stdexcept>
 

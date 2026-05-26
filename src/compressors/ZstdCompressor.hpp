@@ -1,3 +1,6 @@
+/// @file ZstdCompressor.hpp
+/// @brief Lossless zstd compression baseline.
+
 #pragma once
 
 #include <map>
@@ -6,6 +9,14 @@
 
 #include "Compressor.hpp"
 
+/// @brief Lossless reference compressor: Facebook's zstd applied directly
+/// to the raw float bytes.
+///
+/// Serves as the lossless baseline that lossy backends are compared
+/// against. The only tunable is the standard zstd compression level.
+///
+/// **CLI options**
+/// - `compressionLevel` — zstd level, 1 (fastest) … 22 (smallest). Default 3.
 class ZstdCompressor : public Compressor {
 public:
     CompressedData compress(const std::vector<float>& data) override;
@@ -18,5 +29,5 @@ public:
     std::string usage() const override;
 
 private:
-    int _compressionLevel = 3; // Default zstd compression level
+    int _compressionLevel = 3; ///< zstd compression level (1–22).
 };

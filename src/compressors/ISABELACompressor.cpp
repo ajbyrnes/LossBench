@@ -1,3 +1,6 @@
+/// @file ISABELACompressor.cpp
+/// @brief Implementation of @ref ISABELACompressor — see the header for option docs.
+
 #include "ISABELACompressor.hpp"
 #include <cstring>
 #include <stdexcept>

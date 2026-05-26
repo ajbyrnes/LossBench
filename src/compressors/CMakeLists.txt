@@ -24,6 +24,12 @@ set(COMPRESSOR_SOURCES
     ZstdCompressor.hpp
     ZstdTruncCompressor.cpp
     ZstdTruncCompressor.hpp
+    UniformHistogramCompressor.cpp
+    UniformHistogramCompressor.hpp
+    QuantileHistogramCompressor.cpp
+    QuantileHistogramCompressor.hpp
+    QuantileResidualCompressor.cpp
+    QuantileResidualCompressor.hpp
     factory.cpp
     factory.hpp
 )
