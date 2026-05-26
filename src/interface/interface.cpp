@@ -1,3 +1,6 @@
+/// @file interface.cpp
+/// @brief CLI parsing, usage printing, and JSONL serialization.
+
 #include <chrono>
 #include <format>
 #include <fstream>
@@ -109,6 +112,16 @@ static Args parseConfigFile(const std::string& filepath) {
         if (t.contains("decompFile")) {
             test.decompFile = t["decompFile"].get<std::string>();
         }
+        if (t.contains("normalize")) {
+            test.normalize = t["normalize"].get<bool>();
+        }
+        if (t.contains("dataLayout")) {
+            test.dataLayout = t["dataLayout"].get<std::string>();
+            if (test.dataLayout != "flat" && test.dataLayout != "padded2d") {
+                throw std::runtime_error("Invalid dataLayout: " + test.dataLayout +
+                    ". Must be 'flat' or 'padded2d'.");
+            }
+        }
 
         args.tests.push_back(std::move(test));
     }
@@ -151,6 +164,15 @@ Args parseArgs(int argc, char* argv[]) {
             singleTest.decompFile = argv[++i];
         } else if (arg == "--iterations" && i + 1 < argc) {
             singleTest.iterations = std::stoul(argv[++i]);
+        } else if (arg == "--normalize") {
+            singleTest.normalize = true;
+        } else if (arg == "--dataLayout" && i + 1 < argc) {
+            singleTest.dataLayout = argv[++i];
+            if (singleTest.dataLayout != "flat" && singleTest.dataLayout != "padded2d") {
+                throw std::runtime_error("Invalid dataLayout: " + singleTest.dataLayout +
+                    ". Must be 'flat' or 'padded2d'.");
+            }
+            hasSingleTest = true;
         } else if (arg == "--configFile" && i + 1 < argc) {
             configFilePath = argv[++i];
         } else {
@@ -198,7 +220,9 @@ void printUsage() {
         " --compressor <name[:opt=val,...]>"
         " [--resultsFile <file>]"
         " [--decompFile <file>]"
-        " [--iterations <n>]\n"
+        " [--iterations <n>]"
+        " [--normalize]"
+        " [--dataLayout <flat|padded2d>]\n"
         "\n"
         "Usage (multiple tests from config file):\n"
         "  lossbench"
@@ -234,6 +258,12 @@ void printArgs(const Args& args) {
         }
         std::cout << " chunkSize=" << test.chunkSize;
         std::cout << " iterations=" << test.iterations;
+        if (test.normalize) {
+            std::cout << " normalize=true";
+        }
+        if (test.dataLayout != "flat") {
+            std::cout << " dataLayout=" << test.dataLayout;
+        }
         if (!test.decompFile.empty()) {
             std::cout << " decompFile=" << test.decompFile;
         }
@@ -291,31 +321,14 @@ nlohmann::json makeBenchmarkJSON(
         {"iterations", test.iterations},
         {"compressor", test.compressor},
         {"compressor_config", compressorConfig},
+        {"normalize", test.normalize},
+        {"data_layout", test.dataLayout},
         {"results_file", args.resultsFile},
         {"decomp_file", test.decompFile}
     };
 
-    // Metrics and sizes
-    j["results"] = {
-        {"original_size_bytes", metrics.originalSizeBytes},
-        {"compressed_size_bytes", metrics.compressedSizeBytes},
-        {"compression_ratio", metrics.compressionRatio},
-        {"compression_throughput_mbps", metrics.compressionThroughputMbps},
-        {"decompression_throughput_mbps", metrics.decompressionThroughputMbps},
-        {"abs_error_max", metrics.absErrorMax},
-        {"abs_error_avg", metrics.absErrorAvg},
-        {"rel_error_max", metrics.relErrorMax},
-        {"rel_error_avg", metrics.relErrorAvg},
-        {"mse", metrics.MSE},
-        {"psnr", metrics.PSNR},
-        {"ks_statistic", metrics.ksStatistic},
-        {"ks_p_value", metrics.ksPValue},
-        {"wasserstein_distance", metrics.wassersteinDistance},
-        {"q5_shift", metrics.q5Shift},
-        {"q50_shift", metrics.q50Shift},
-        {"q95_shift", metrics.q95Shift},
-        {"q99_shift", metrics.q99Shift}
-    };
+    // Metrics — populated by registered metric functions
+    j["results"] = metrics.metrics;
 
     return j;
 }

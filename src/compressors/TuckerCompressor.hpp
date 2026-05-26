@@ -1,5 +1,5 @@
-/// @file ZstdCompressor.hpp
-/// @brief Lossless zstd compression baseline.
+/// @file TuckerCompressor.hpp
+/// @brief Tucker-decomposition-based lossy compressor.
 
 #pragma once
 
@@ -9,15 +9,11 @@
 
 #include "Compressor.hpp"
 
-/// @brief Lossless reference compressor: Facebook's zstd applied directly
-/// to the raw float bytes.
-///
-/// Serves as the lossless baseline that lossy backends are compared
-/// against. The only tunable is the standard zstd compression level.
+/// @brief Lossy compressor based on truncated Tucker tensor decomposition.
 ///
 /// **CLI options**
-/// - `compressionLevel` — zstd level, 1 (fastest) … 22 (smallest). Default 3.
-class ZstdCompressor : public Compressor {
+/// - `epsilon` — relative truncation tolerance. Default 0.1.
+class TuckerCompressor : public Compressor {
 public:
     CompressedData compress(const std::vector<float>& data) override;
     std::vector<float> decompress(const CompressedData& compressedData) override;
@@ -29,5 +25,5 @@ public:
     std::string usage() const override;
 
 private:
-    int _compressionLevel = 3; ///< zstd compression level (1–22).
+    double _epsilon = 0.1; ///< Relative truncation tolerance.
 };

@@ -8,173 +8,280 @@ The ROOT framework currently provides four lossless compressors (zlib, lzma, lz4
 
 ## Build
 
-LossBench is a CMake project written in C++. It requires a C++ compiler and CMake (exact versions TBD).
+LossBench is a CMake project written in C++20. Build requirements:
 
-Additional external dependencies include:
-
+- CMake 3.20+
+- A C++20 compiler
 - [ROOT Data Analysis Framework](https://root.cern/install/)
-- [Niels Lohmann JSON libraries](https://github.com/nlohmann/json)
-- Compression libraries
-  - See [##Compressors]
-  - The current build process expects that _all_ supported compressors are present; this will change in the future
- 
-Building should just require the standard CMake build procedure:
+- [nlohmann/json](https://github.com/nlohmann/json)
+- [zstd](https://github.com/facebook/zstd)
+
+Optional compressor backends — each is enabled when its dependency is found
+at configure time and skipped otherwise:
+
+- [SZ3](https://github.com/szcompressor/SZ3)
+- [ZFP](https://computing.llnl.gov/projects/zfp)
+- [SPERR](https://github.com/NCAR/SPERR)
+- [SZp](https://github.com/szcompressor/SZp)
+- [MGARD](https://github.com/CODARcode/MGARD)
+- Tucker, ISABELA, ZFPX
+
+Standard CMake build procedure:
 
 ```bash
 git clone https://github.com/ajbyrnes/LossBench.git
-mkdir build
-cmake -S LossBench -B build
-cmake --build build -j<numThreads>
-```
-
-```bash
-# Build
+cd LossBench
 cmake -S src -B build
-cmake --build build
-
-# Run all tests
-ctest --test-dir build
-
-# Verbose output
-ctest --test-dir build -V
-
-# Run specific test by pattern
-ctest --test-dir build -R "Factory"
+cmake --build build -j$(nproc)
 ```
+
+The executable is produced at `build/lossbench`. A GoogleTest suite is
+scaffolded under `src/tests/` but is currently disabled in the CMake
+configuration; re-enabling and rounding it out is on the TODO list.
 
 ## Usage
 
 ```bash
-./lossbench --inputFile <inputFile> --tree <treename> --branches <branch1,branch2,...>
-            --chunkSize <size>
-            --compressor <compressor:opt1=val1,opt2=val2,...>
-            --resultsFile <resultsFile>
-            [--decompFile <decompFile>]
+./build/lossbench \
+    --inputFile <file.root> \
+    --tree <treename> \
+    --branches <branch1,branch2,...> \
+    --chunkSize <bytes> \
+    --compressor <name:opt1=val1,opt2=val2,...> \
+    --resultsFile <output.jsonl> \
+    [--iterations <n>] \
+    [--normalize] \
+    [--dataLayout flat|padded2d] \
+    [--decompFile <output.root>] \
+    [--configFile <tests.json>]
 ```
 
-- `--inputFile <inputFile>`   The path to the `.root` file containing the data to be compressed
-- `--tree <treename>`  The name of the TTree in `<inputFile>`
-- `--branches <branch1,branch2,...>`    The branches to read from `<treename>`, as a comma-separated list
-- `--chunkSize <size>`     The amount of data to compress at a time, in bytes
-- `--compressor <compressor:opt1=1,opt2=val2,...>` The compressor to use and its arguments, as a comma-separated list of `key=value` items
-- `--resultsFile <resultsFile>` Benchmark metrics will be written to `resultsFile.jsonl`. If `resultsFile.jsonl` _already exists_, then results will be _appended_ to that file.
-- `[--decompFile <decompFile>]` Decompressed data will be written to `decompFile.root`. If `--decompFile` is not specified, data is not written.
+Required:
 
+- `--inputFile <file.root>` — input `.root` file containing the data to be compressed.
+- `--tree <treename>` — name of the TTree in `--inputFile`.
+- `--branches <b1,b2,...>` — comma-separated list of branches to read.
+- `--chunkSize <bytes>` — chunk size in bytes; 0 means "one chunk".
+- `--compressor <name:opt1=val1,...>` — compressor name plus a comma-separated
+  list of `key=value` options.
+- `--resultsFile <output.jsonl>` — JSONL output path; rows are appended if
+  the file already exists.
 
-Results are written in JSONL format. This keeps data organized and human readable, for quick inspections. Most analysis and plotting tools are able to parse JSONL data. If LossBench is told to write benchmark results to a `.jsonl` file that _already_ exists, 
+Optional:
+
+- `--iterations <n>` — repeat each compress/decompress run `n` times and
+  average the timing.
+- `--normalize` — normalize each chunk before compression and undo the
+  normalization after decompression.
+- `--dataLayout flat|padded2d` — treat per-event vectors as a flat 1-D
+  stream (default) or zero-pad them into a 2-D row-major array so
+  multi-dimensional backends (ZFP, SZ3, SPERR) can use their native APIs.
+- `--decompFile <output.root>` — also write the decompressed data into a
+  parallel ROOT file. Omit to skip.
+- `--configFile <tests.json>` — queue many `(compressor, options, chunk,
+  layout)` test configurations in one invocation; each is run against
+  every selected branch.
+
+Info options:
+
+- `--list-compressors` — print the compressors available in this build.
+- `--compressor-help <name>` — print the option surface of a specific compressor.
+- `-h`, `--help` — print top-level usage.
+
+Results are written in [JSON Lines](https://jsonlines.org/) format: one
+self-describing JSON object per benchmark run. Each row records the
+inputs, the compressor configuration, and the measured metrics, so rows
+can be filtered, joined, or plotted without external bookkeeping.
 
 ## Examples
 
-See the `examples` directory for a more walkthough-style example of using LossBench.
+See the `examples` directory for walkthrough-style examples of using LossBench.
 
-LossBench is currently designed around testing _individual_ compressor configurations -- that is, each time you run the program, you test _one_ compressor with _one_ particular setting. This avoids having to hard-code loops over each compressor's specific set of options in the program itself.** Iterating over _all_ possible configurations of a compressor can instead be accomplished via scripting. 
-
-For example, the `zlib` compressor
+Each LossBench invocation can run multiple `(compressor, options, chunk,
+layout)` tests against the same branches. The simplest pattern is one
+test per invocation, driven from a shell loop over the parameter you want
+to sweep:
 
 ```bash
 #!/bin/bash
-# Benchmark script for zlib compression with varying compression levels.
+# Sweep zstd compression levels against four jet branches.
 
-# Create a timestamped results directory to store output files:
-#    results.jsonl -- results of running the benchmarks, in JSONL format
-#    benchmark.log -- logging statements output by the benchmarking program, in plain text
-# The timestamp uniquely identifies the run and prevents overwriting previous results
 timestamp=$(date +"%Y%m%d_%H%M%S")
-
-results_dir="results_zlib_$timestamp"
+results_dir="results_zstd_$timestamp"
 mkdir -p "$results_dir"
 
 results_file="$results_dir/results.jsonl"
 log_file="$results_dir/benchmark.log"
 
-# Benchmark parameters
 input_file="jets.root"
 tree_name="CollectionTree"
 branches="AnalysisJetsAuxDyn.pt,AnalysisJetsAuxDyn.eta,AnalysisJetsAuxDyn.phi,AnalysisJetsAuxDyn.m"
 chunk_size=32768
 
-# Run benchmark with zlib for varying compression levels
-for compression_level in {1..9}
-do
-    echo "Running benchmark with zlib compression level $compression_level..." >> "$log_file" 2>&1
-
+for level in {1..9}; do
     ./build/lossbench \
         --inputFile "$input_file" \
         --tree "$tree_name" \
         --branches "$branches" \
         --chunkSize "$chunk_size" \
-        --compressor "zlib:compressionLevel=$compression_level" \
+        --compressor "zstd:compressionLevel=$level" \
         --resultsFile "$results_file" >> "$log_file" 2>&1
-
-    echo "Benchmark with zlib compression level $compression_level completed." >> "$log_file" 2>&1
 done
-
 ```
 
-**A significant limitation to this approach is that data needs to be reloaded as we iterate over different compressor configurations. Using the `TTreeReader` class dramatically reduces read time, especially for subsequent reads from the same TTree; however, this behavior is obviously still not desirable.
+The shell-loop pattern reloads the branch data on every invocation. For
+large sweeps, prefer `--configFile <tests.json>`: all queued tests are
+run against each branch's in-memory buffer, so the ROOT data is read
+once and reused.
 
 ## Compressors
 
-- `zlib` -- Wrapper around [zlib](https://github.com/madler/zlib)
-- Custom bit truncation compressor
-  - Performs bit truncation before losslessly compressing with [zlib](https://github.com/madler/zlib)
-- `sz3` -- Wrapper around [SZ3: A Modular Error-bounded Lossy Compression Framework for Scientific Datasets](https://github.com/szcompressor/SZ3)
-  - SZ3 has a dependency on [zstd](https://github.com/facebook/zstd)
+LossBench ships with wrappers around several third-party compression
+libraries plus a few custom histogram-style baselines. Which backends are
+actually available in a given build depends on which optional dependencies
+were found at CMake configure time; run
+
+```bash
+./build/lossbench --list-compressors
+```
+
+for the live list and
+
+```bash
+./build/lossbench --compressor-help <name>
+```
+
+for per-compressor options.
+
+**Lossless / near-lossless**
+
+- `zstd` — Direct wrapper around [zstd](https://github.com/facebook/zstd).
+  Option: `compressionLevel` (1–22).
+- `zstd-trunc` — Mantissa-bit truncation followed by zstd. Options:
+  `compressionLevel`, `truncBits` (0–23).
+
+**Error-bounded lossy (third-party)**
+
+- `sz3` — [SZ3 modular error-bounded lossy compression framework](https://github.com/szcompressor/SZ3).
+- `zfp` — [ZFP floating-point compression](https://computing.llnl.gov/projects/zfp).
+  Options: `mode` (`rate` | `precision` | `accuracy` | `reversible`), plus
+  the matching parameter.
+- `zfpx` — Experimental ZFPX backend; same option surface as `zfp`.
+- `sperr` — [SPERR wavelet-based compression](https://github.com/NCAR/SPERR).
+  Options: `mode` (`bitrate` | `psnr` | `pwe`), `quality`, `nthreads`.
+- `szp` — [SZp absolute-error-bounded compression](https://github.com/szcompressor/SZp)
+  with OpenMP. Options: `absErrBound`, `blockSize`.
+- `mgard` — [MGARD multigrid-based compression](https://github.com/CODARcode/MGARD).
+  Options: `mode` (`abs` | `rel`), `tolerance`, `smoothness`.
+- `tucker` — Tucker tensor decomposition. Option: `epsilon`.
+- `isabela` — [ISABELA windowed B-spline / wavelet compression](https://users.nccs.gov/~scampbel/isabela/).
+  Options: `windowSize`, `ncoefficients`, `errorRate`, `transform`.
+
+**Custom histogram baselines**
+
+- `uniform-histogram` — Equal-width histogram quantization + zstd on the
+  bin indices. Options: `nBins`, `zstdLevel`.
+- `quantile-histogram` — Quantile-spaced histogram + zstd on indices and
+  bin edges. Options: `nBins`, `edgeCompressionLevel`.
+- `quantile-residual` — Quantile histogram plus a bounded fixed-width
+  residual inside each bin. Options: `nBins`, `residualBits`,
+  `edgeCompressionLevel`.
 
 ## Metrics and Reporting
 
-Currently, LossBench collects and reports all of the following information:
-  - Compression ratio (original data bytes / compressed data bytes)
-  - Compression throughput (MB/s)
-  - Decompression throughput (MB/s)
-  - Max/mean pointwise absolute error
-  - Max/mean pointwise relative error
-  - Mean-squared error (MSE)
-  - Peak signal-to-noise ratio (PSNR)
+Each benchmark run produces one JSONL row containing the full
+configuration, system metadata, and the following metrics:
 
-The following information about JSON output is outdated. LossBench now reports metrics with JSONL, and this section needs to be updated.
-However, the example JSON output is still close to what you will see in the `.jsonl` output.
+**Throughput / size**
 
-The JSON results also contain the settings used for each run, so these do not need to be recorded separately.
+- `compression_ratio` — original bytes / compressed bytes
+- `original_size_bytes`, `compressed_size_bytes`
+- `compression_throughput_mbps`, `decompression_throughput_mbps`
 
-Example JSON output:
+**Point-wise error**
 
-```JSON
+- `abs_error_max`, `abs_error_avg` — max and mean absolute error
+- `rel_error_max`, `rel_error_avg` — max and mean relative error
+- `mse` — mean squared error
+- `psnr` — peak signal-to-noise ratio (dB)
+
+**Distribution-shape**
+
+- `ks_statistic`, `ks_p_value` — Kolmogorov–Smirnov two-sample test
+- `wasserstein_distance` — 1-D Wasserstein (earth mover's) distance
+- `q5_shift`, `q50_shift`, `q95_shift`, `q99_shift` — shift of selected
+  quantiles between original and reconstructed distributions
+
+Each row is fully self-describing — the configuration that produced it
+is recorded inline, so no separate run log is needed.
+
+Example JSONL row (one line, pretty-printed here for readability):
+
+```json
 {
-  "args": {
-    "branch": "AnalysisJetsAuxDyn.pt",
-    "chunkSize": 16384,
-    "compressionOptions": {
-      "compressionLevel": "5",
-      "mantissaBits": "8"
+  "config": {
+    "input_file": "DAOD_PHYSLITE.37019878._000009.pool.root.1",
+    "tree": "CollectionTree",
+    "branches": "AnalysisSiHitElectronsAuxDyn.pt",
+    "chunk_size": 16384,
+    "iterations": 5,
+    "normalize": false,
+    "compressor": "sperr",
+    "compressor_config": {
+      "mode": "bitrate",
+      "quality": "2.000000",
+      "nthreads": "0"
     },
-    "compressor": "BitTruncation",
-    "dataFile": "DAOD_PHYSLITE.37019878._000009.pool.root.1",
-    "decompFile": "",
-    "treename": "CollectionTree",
-    "writeDecompressed": false
+    "results_file": "results.jsonl",
+    "decomp_file": ""
   },
-  "host": "Niamh",
   "results": {
-    "compressionRatio": 2.3435992143860864,
-    "compressionThroughputMBps": 3.149040663090863,
-    "decompressionThroughputMBps": 128.13904801369063,
-    "maxRelError": 0.19491989937883336,
-    "meanRelError": 0.06987837935555764,
-    "minRelError": 0.0,
+    "original_size_bytes": 24536,
+    "compressed_size_bytes": 1606,
+    "compression_ratio": 15.277709,
+    "compression_throughput_mbps": 38.46,
+    "decompression_throughput_mbps": 87.88,
+    "abs_error_max": 5445.494,
+    "abs_error_avg": 1801.335,
+    "rel_error_max": 3.267,
+    "rel_error_avg": 0.470,
+    "mse": 4968646.0,
+    "psnr": 38.18,
+    "ks_statistic": 0.476,
+    "ks_p_value": 0.0,
+    "wasserstein_distance": 1537.51,
+    "q5_shift": 933.92,
+    "q50_shift": 2689.57,
+    "q95_shift": 1537.20,
+    "q99_shift": 129.41
   },
-  "timestamp": "2025-09-17_16-08-55"
+  "system": {
+    "host": "x1000c0s2b0n1",
+    "timestamp": "2026-04-09 13:19:08"
+  }
 }
 ```
 
 ## Tests
 
-TODO
+A GoogleTest suite is scaffolded under `src/tests/` but is currently
+disabled in the build. Re-enabling it and expanding coverage is tracked
+in the TODO list.
+
+## Authors
+
+LossBench is developed by Amy J. Byrnes (<ajbyrne2@uic.edu>), with
+support from the Computational and Computer Science for the Physics
+Frontier (C2theP2) fellowship.
+
+## License
+
+License pending institutional review at the University of Illinois Chicago;
+a permissive license (BSD 3-Clause or equivalent) is planned. In the
+interim, conference attendees and academic researchers may download, build,
+and evaluate the software for non-commercial purposes. For any other use,
+contact <ajbyrne2@uic.edu>. See [LICENSE](LICENSE) for the full notice.
 
 ## TODOs
 
-- Add way to list supported compressors
-- Add way to list options for supported compressors
-- Add test suites with GoogleTest
-- Authorship
-- License?
+- Re-enable and expand the GoogleTest suite

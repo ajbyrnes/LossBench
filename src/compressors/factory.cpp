@@ -1,3 +1,11 @@
+/// @file factory.cpp
+/// @brief Build-time registration of all compressors compiled into LossBench.
+///
+/// Each backend is gated by a `HAS_*` macro set by CMake when the backend's
+/// dependency is found. The lambda factories in @ref factories are the only
+/// place that mentions concrete compressor classes by name, so adding a new
+/// backend means: add the include, add an entry here, update CMakeLists.txt.
+
 #include <algorithm>
 #include <memory>
 #include <stdexcept>
@@ -7,6 +15,9 @@
 
 #include "ZstdCompressor.hpp"
 #include "ZstdTruncCompressor.hpp"
+#include "UniformHistogramCompressor.hpp"
+#include "QuantileHistogramCompressor.hpp"
+#include "QuantileResidualCompressor.hpp"
 #ifdef HAS_SZ3
 #include "SZ3Compressor.hpp"
 #endif
@@ -19,6 +30,18 @@
 #ifdef HAS_SZP
 #include "SZpCompressor.hpp"
 #endif
+#ifdef HAS_MGARD
+#include "MGARDCompressor.hpp"
+#endif
+#ifdef HAS_ZFPX
+#include "ZFPXCompressor.hpp"
+#endif
+#ifdef HAS_TUCKER
+#include "TuckerCompressor.hpp"
+#endif
+#ifdef HAS_ISABELA
+#include "ISABELACompressor.hpp"
+#endif
 #include "factory.hpp"
 
 using CompressorFactory = std::unique_ptr<Compressor>(*)();
@@ -26,6 +49,9 @@ using CompressorFactory = std::unique_ptr<Compressor>(*)();
 static const std::unordered_map<std::string, CompressorFactory> factories = {
     {"zstd", +[]() -> std::unique_ptr<Compressor> { return std::make_unique<ZstdCompressor>(); }},
     {"zstd-trunc", +[]() -> std::unique_ptr<Compressor> { return std::make_unique<ZstdTruncCompressor>(); }},
+    {"uniform-histogram", +[]() -> std::unique_ptr<Compressor> { return std::make_unique<UniformHistogramCompressor>(); }},
+    {"quantile-histogram", +[]() -> std::unique_ptr<Compressor> { return std::make_unique<QuantileHistogramCompressor>(); }},
+    {"quantile-residual", +[]() -> std::unique_ptr<Compressor> { return std::make_unique<QuantileResidualCompressor>(); }},
 #ifdef HAS_SZ3
     {"sz3", +[]() -> std::unique_ptr<Compressor> { return std::make_unique<SZ3Compressor>(); }},
 #endif
@@ -37,6 +63,18 @@ static const std::unordered_map<std::string, CompressorFactory> factories = {
 #endif
 #ifdef HAS_SZP
     {"szp", +[]() -> std::unique_ptr<Compressor> { return std::make_unique<SZpCompressor>(); }},
+#endif
+#ifdef HAS_MGARD
+    {"mgard", +[]() -> std::unique_ptr<Compressor> { return std::make_unique<MGARDCompressor>(); }},
+#endif
+#ifdef HAS_ZFPX
+    {"zfpx", +[]() -> std::unique_ptr<Compressor> { return std::make_unique<ZFPXCompressor>(); }},
+#endif
+#ifdef HAS_TUCKER
+    {"tucker", +[]() -> std::unique_ptr<Compressor> { return std::make_unique<TuckerCompressor>(); }},
+#endif
+#ifdef HAS_ISABELA
+    {"isabela", +[]() -> std::unique_ptr<Compressor> { return std::make_unique<ISABELACompressor>(); }},
 #endif
 };
 

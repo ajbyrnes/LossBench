@@ -1,3 +1,6 @@
+/// @file root-utils.cpp
+/// @brief ROOT TTree I/O helpers for `vector<float>` branches.
+
 #include <TBranch.h>
 #include <TFile.h>
 #include <TLeaf.h>

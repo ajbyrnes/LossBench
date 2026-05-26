@@ -1,3 +1,6 @@
+/// @file ZstdTruncCompressor.cpp
+/// @brief Implementation of @ref ZstdTruncCompressor — see the header for option docs.
+
 #include <bit>
 #include <cstdint>
 #include <format>
